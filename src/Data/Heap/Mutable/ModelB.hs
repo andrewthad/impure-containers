@@ -30,8 +30,6 @@ newtype Elem = Elem { getElem :: Int }
 {-@ assume MU.unsafeWrite :: (Unbox a, PrimMonad m) => x:(MU.MVector (PrimState m) a) -> {i:Int | i < umvlen x } -> a -> m () @-}
 {-@ assume MV.length :: forall a. x:(Data.Vector.MVector s a) -> {v : Nat | v = vlen x } @-}
 
-
-
 {-  assume myReadMutVar :: PrimMonad m => x:(MutVar (PrimState m) a) -> {k:m a| v = vlen x } @-}
 myReadMutVar :: PrimMonad m => MutVar (PrimState m) a -> m a
 myReadMutVar = readMutVar
@@ -56,6 +54,8 @@ derivingUnbox "Elem"
 {-@ type HeapSized s p n = { h : Heap s p | mvlen (heapBinaryTree h) - 1 > n && umvlen (heapBinaryTreeElem h) - 1 > n} @-}
 {-@ type HeapSizedX s p n = { h : Heap s p | mvlen (heapBinaryTree h) > n && umvlen (heapBinaryTreeElem h) > n} @-}
 
+{-@ predicate Sized H N = ((mvlen (heapBinaryTree H)) > N && (umvlen (heapBinaryTreeElem H)) > N) @-}
+
 data Heap s p = Heap
   { heapMax :: Int
   , heapBinaryTree :: MVector s p -- ^ Binary tree of priorities
@@ -74,7 +74,7 @@ elem3 v = MV.unsafeRead v 3
 -- | Does not perform a bounds check to see if the
 --   element is allowed.
 {-@ unsafePush :: p -> e:Elem -> n:Int
-               -> {h:HeapSized (PrimState m) p n | elemVal e < maxVal h}
+               -> {h:Heap (PrimState m) p | elemVal e < maxVal h && Sized h (n + 1)}
                -> m {a:Int | a == n + 1} @-}
 unsafePush :: forall m p k. (Ord p, PrimMonad m)
   => p -> Elem -> Int -> Heap (PrimState m) p -> m Int
