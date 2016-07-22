@@ -20,6 +20,7 @@ library
     Data.HashMap.Mutable.Basic
     -- Data.Heap.Mutable.ModelA
     Data.Heap.Mutable.ModelB
+    Data.Heap.Mutable.ModelC
     Data.Graph.Immutable
     Data.Graph.Immutable.Tagged
   other-modules:

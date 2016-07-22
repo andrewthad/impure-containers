@@ -57,10 +57,10 @@ derivingUnbox "Elem"
 {-@ predicate Sized H N = ((mvlen (heapBinaryTree H)) > N && (umvlen (heapBinaryTreeElem H)) > N) @-}
 
 data Heap s p = Heap
-  { heapMax :: Int
-  , heapBinaryTree :: MVector s p -- ^ Binary tree of priorities
-  , heapBinaryTreeElem :: MU.MVector s Elem -- ^ Binary tree of elements
-  , heapElemLookupIndex :: MU.MVector s Int -- ^ Lookup binary tree index by element
+  { heapMax :: !Int
+  , heapBinaryTree :: !(MVector s p) -- ^ Binary tree of priorities
+  , heapBinaryTreeElem :: !(MU.MVector s Elem) -- ^ Binary tree of elements
+  , heapElemLookupIndex :: !(MU.MVector s Int) -- ^ Lookup binary tree index by element
   }
 
 {-@ measure maxVal :: Heap s p -> Int @-}
@@ -73,17 +73,46 @@ elem3 v = MV.unsafeRead v 3
 
 -- | Does not perform a bounds check to see if the
 --   element is allowed.
-{-@ unsafePush :: p -> e:Elem -> n:Int
-               -> {h:Heap (PrimState m) p | elemVal e < maxVal h && Sized h (n + 1)}
-               -> m {a:Int | a == n + 1} @-}
+{-@ unsafePush :: p -> e:Elem -> oldSize:Int
+               -> {h:Heap (PrimState m) p | elemVal e < maxVal h && Sized h (oldSize + 1)}
+               -> m {newSize:Int | newSize == oldSize + 1} @-}
 unsafePush :: forall m p k. (Ord p, PrimMonad m)
   => p -> Elem -> Int -> Heap (PrimState m) p -> m Int
 unsafePush priority element currentSize (Heap _ binTree binTreeElem lookupIx) = do
   let newSize = currentSize + 1
   MV.unsafeWrite binTree newSize priority
   MU.unsafeWrite binTreeElem newSize element
+  -- bubbleUp
   return newSize
   -- die "foobar" -- bubbleUp newSize binTree binTreeElem lookupIx
+
+{-  bubbleUp :: currentSize:Int
+             -> {binTree:MVector (PrimState m) p | mvlen binTree >
+             -> binTreeElem:MVector (PrimState m) Elem
+             -> lookupIx:MVector (PrimState m) Int
+             -> m ()
+@-}
+-- bubbleUp :: (Ord p, PrimMonad m)
+--          => Int
+--          -> MVector (PrimState m) p
+--          -> MU.MVector (PrimState m) Elem
+--          -> MU.MVector (PrimState m) Int
+--          -> m ()
+-- bubbleUp currentSize binTree binTreeElem lookupIx = go currentSize where
+--   go !ix = do
+--     let parentIx = getParentIndex ix
+--     if parentIx > 0
+--       then do
+--         myElement <- MU.unsafeRead binTreeElem ix
+--         parentElement <- MU.unsafeRead binTreeElem parentIx
+--         myPriority <- MV.unsafeRead binTree ix
+--         parentPriority <- MV.unsafeRead binTree parentIx
+--         if myPriority < parentPriority
+--           then do
+--             swapTwo binTree binTreeElem lookupIx myElement parentElement ix parentIx
+--             go parentIx
+--           else return ()
+--       else return ()
 
 {-@ die :: {v:String | false} -> a  @-}
 die :: String -> a
