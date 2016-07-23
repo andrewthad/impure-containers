@@ -9,12 +9,16 @@ import Data.Vector.Mutable (MVector)
 import Control.Monad
 import Data.Word
 import Control.Monad.ST (runST)
+import qualified Data.Heap.Mutable.ModelD as Heap
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 
-data Vertex g = Vertex { getVertex :: Int }
+newtype Vertex g = Vertex { getVertex :: Int }
+newtype Vertices g v = Vertices { getVertices :: Vector v }
+  deriving (Functor)
+
 data Edge g = Edge
   { edgeVertexA :: !Int
   , edgeVertexB :: !Int
@@ -23,10 +27,10 @@ data Edge g = Edge
 -- | The neighbor vertices and neighbor edges must have
 --   equal length.
 data Graph g e v = Graph
-  { graphVertices :: Vector v
-  , graphOutboundNeighborVertices :: Vector (U.Vector Int)
-  , graphOutboundNeighborEdges :: Vector (Vector e)
-  , graphEdges :: Int -> Int -> Maybe e
+  { graphVertices :: !(Vector v)
+  , graphOutboundNeighborVertices :: !(Vector (U.Vector Int))
+  , graphOutboundNeighborEdges :: !(Vector (Vector e))
+  -- , graphEdges :: Int -> Int -> Maybe e
   } deriving (Functor)
 
 -- instance Functor (Graph g e) where
@@ -37,24 +41,25 @@ data Graph g e v = Graph
 -- allowed = 1
 -- notAllowed = 0
 
+-- | This is a generalization of Dijkstra\'s algorithm.
 breadthFirstBy :: (Ord s, Monoid s)
-               => (v -> v -> e -> s)
+               => (v -> v -> s -> e -> s)
                -> Vertex g
                -> Graph g e v
-               -> Graph g e s
-breadthFirstBy f (Vertex v0) g@(Graph vertices outNeighbors outEdges _edges) = runST $ do
+               -> Vertices g s
+breadthFirstBy f v0 g@(Graph vertices outNeighbors outEdges) = runST $ do
   let vertexCount = V.length vertices
   newVertices <- MV.new vertexCount
   MV.set newVertices mempty
   visited <- MU.new vertexCount
   MU.set visited False
-  heap <- minHeapNew vertexCount
-  minHeapInsert v0 mempty heap
+  heap <- Heap.new vertexCount
+  Heap.unsafePush mempty (getVertex v0) heap
   let keepGoing = do
-        m <- minHeapPop heap
+        m <- Heap.pop heap
         case m of
           Nothing -> return ()
-          Just (vertexIx,s) -> do
+          Just (s,vertexIx) -> do
             MU.write visited vertexIx True
             MV.write newVertices vertexIx s
             let neighborVertices = outNeighbors V.! vertexIx
@@ -66,27 +71,13 @@ breadthFirstBy f (Vertex v0) g@(Graph vertices outNeighbors outEdges _edges) = r
                   alreadyVisited <- MU.read visited neighborVertexIx
                   if alreadyVisited
                     then return ()
-                    else minHeapInsert neighborVertexIx (f v1 v2 edgeVal) heap
+                    else Heap.push (f v1 v2 s edgeVal) neighborVertexIx heap
             U.imapM_ runInsert neighborVertices
             keepGoing
   keepGoing
   newVerticesFrozen <- V.freeze newVertices
-  return (g {graphVertices = newVerticesFrozen})
-
-data Heap s p = Heap
-  { heapBinaryTree :: MVector s p
-  , heapElemLookupIndex :: MU.MVector s Int
-  }
-
-minHeapPop :: Ord p => Heap (PrimState m) p -> m (Maybe (Int,p))
-minHeapPop _ = error "write me"
-
--- This may update an existing element
-minHeapInsert :: (Ord p, Monoid p) => Int -> p -> Heap (PrimState m) p -> m ()
-minHeapInsert _ _ = error "write me"
-
-minHeapNew :: Int -> m (Heap (PrimState m) p)
-minHeapNew _maxElement = error "write me"
+  return (Vertices newVerticesFrozen)
+  -- return (g {graphVertices = newVerticesFrozen})
 
 lookupVertex :: Eq v => v -> Graph g e v -> Maybe (Vertex g)
 lookupVertex val g = fmap Vertex (V.elemIndex val (graphVertices g))

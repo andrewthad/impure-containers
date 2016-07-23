@@ -21,6 +21,7 @@ library
     -- Data.Heap.Mutable.ModelA
     Data.Heap.Mutable.ModelB
     Data.Heap.Mutable.ModelC
+    Data.Heap.Mutable.ModelD
     Data.Vector.Unique
     Data.Graph.Immutable
     Data.Graph.Immutable.Tagged
@@ -40,6 +41,7 @@ library
     , liquidhaskell
     , vector-th-unbox
     , containers
+    , ghc-prim
   default-language:    Haskell2010
 
 test-suite impure-containers-test
