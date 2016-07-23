@@ -31,6 +31,12 @@ mtake = M.take
 mdrop :: Int -> MVector s a -> MVector s a
 mdrop = M.drop
 
+{-@ assume mslice :: start:Nat -> length:Nat ->
+                     {in:MVector s a | start + length <= mvlen in } ->
+                     {out:MVector s a | mvlen out = length } @-}
+mslice :: Int -> Int -> MVector s a -> MVector s a
+mslice = M.slice
+
 {-@ assume vcopy :: target:MVector s a ->
                     source:{source:Vector a | mvlen target = vlen source } ->
                     ST s () @-}
@@ -48,13 +54,13 @@ unionV v1X v2X = V.create (mnew (V.length v1X + V.length v2X) >>= go v1X v2X 0 0
               v2:Vector a ->
               sindex1:{n:Nat | n <= vlen v1 } ->
               sindex2:{n:Nat | n <= vlen v2 } ->
-              tindex:{n:Nat | true } ->
-              target:{mv:MVector s a | tindex <= mvlen mv && vlen v1 + vlen v2 = mvlen mv } ->
+              tindex:Nat ->
+              target:{mv:MVector s a | tindex + (vlen v2 - sindex2) <= mvlen mv } ->
               ST s (MVector s a) @-}
-  where go :: Vector a -> Vector a -> Int -> Int -> Int -> MVector s a -> ST s (MVector s a)
-        go v1 v2 sindex1 sindex2 tindex target = case V.length v1 <= sindex1 of
+  where go :: Int -> Int -> Int -> MVector s a -> ST s (MVector s a)
+        go sindex1 sindex2 tindex target = case V.length v1 == sindex1 of
           True -> do
-            vcopy (mtake (V.length v2 - sindex2) (mdrop tindex target)) (V.drop sindex2 v2)
-            pure target -- (M.take (tindex + V.length v2 - sindex2) target)
+            vcopy (mslice tindex (V.length v2 - sindex2) target) (V.drop sindex2 v2)
+            pure (mtake (tindex + V.length v2 - sindex2) target)
           False -> pure target
 
