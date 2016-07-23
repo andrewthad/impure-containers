@@ -14,7 +14,7 @@ import Control.Monad.ST (ST)
 mnew :: Int -> ST s (M.MVector s a)
 mnew = M.new
 
-{-@ assume mtake :: n:Nat -> in:{in:MVector s a | n <= mvlen mv } -> {out:MVector s a | mvlen out = n } @-}
+{-@ assume mtake :: n:Nat -> in:{in:MVector s a | n <= mvlen in } -> {out:MVector s a | mvlen out = n } @-}
 mtake :: Int -> MVector s a -> MVector s a
 mtake = M.take
 
@@ -23,6 +23,12 @@ mtake = M.take
                     {out:MVector s a | mvlen out = mvlen in - n } @-}
 mdrop :: Int -> MVector s a -> MVector s a
 mdrop = M.drop
+
+{-@ assume mslice :: start:Nat -> length:Nat ->
+                     {in:MVector s a | start + length <= mvlen in } ->
+                     {out:MVector s a | mvlen out = length } @-}
+mslice :: Int -> Int -> MVector s a -> MVector s a
+mslice = M.slice
 
 {-@ assume vcopy :: target:MVector s a ->
                     source:{source:Vector a | mvlen target = vlen source } ->
@@ -39,13 +45,13 @@ unionV :: forall a. Ord a => V.Vector a -> V.Vector a -> V.Vector a
 unionV v1 v2 = V.create (mnew (V.length v1 + V.length v2) >>= go 0 0 0)
     {-@ go :: sindex1:{n:Nat | n <= vlen v1 } ->
               sindex2:{n:Nat | n <= vlen v2 } ->
-              tindex:{n:Nat | true } ->
-              target:{mv:MVector s a | tindex <= mvlen mv } ->
+              tindex:Nat ->
+              target:{mv:MVector s a | tindex + (vlen v2 - sindex2) <= mvlen mv } ->
               ST s (MVector s a) @-}
   where go :: Int -> Int -> Int -> MVector s a -> ST s (MVector s a)
-        go sindex1 sindex2 tindex target = case V.length v1 <= sindex1 of
+        go sindex1 sindex2 tindex target = case V.length v1 == sindex1 of
           True -> do
-            vcopy (mtake (V.length v2 - sindex2) (mdrop tindex target)) (V.drop sindex2 v2)
-            pure target -- (M.take (tindex + V.length v2 - sindex2) target)
+            vcopy (mslice tindex (V.length v2 - sindex2) target) (V.drop sindex2 v2)
+            pure (mtake (tindex + V.length v2 - sindex2) target)
           False -> pure target
 
