@@ -1,9 +1,46 @@
-{-# LANGUAGE RankNTypes  #-}
-{-# LANGUAGE BangPatterns  #-}
-{-# LANGUAGE MagicHash  #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE MagicHash           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | This module provides a variant of a mutable binary min heap that is used elsewhere to implement
+--   Dijkstra\'s algorithm. It is unlikely that there are other uses for this specific
+--   implementation. The binary heap in this module uses the standard array-as-binary-heap
+--   approach where the 0-index item in the array is unused, the 1-index item is the
+--   root, and the @n@ element has its left child at @2n@ and its right child at @2n + 1@.
+--   The following additions (which are uncommon) have been made:
+--
+--   * This heap only supports 'Int' elements but is polymorphic in the priority data type.
+--   * When the heap is initialized, it is given an 'Int'. This represents and exclusive upper bound
+--     on the allowed elements. For example, if you pass 40, then you can only push 0 through 39 as
+--     elements.
+--   * Most of the functions in this module take an extra 'Int' (right after the 'RawHeap' argument).
+--     This 'Int' tells us the number of items currently in the heap. In some cases, this argument
+--     is not even used, but it is present so that LiquidHaskell can provide extra bound-checking assurances.
+--     For example, if we initialize the heap with @new 90@, and then push three elements, we do not
+--     want to be able to read the 83rd element in the 'rawHeapPriorities' and 'rawHeapElements'
+--     arrays. Even though the this index is technically in bounds, the element stored there is not
+--     actually in the heap. Many places where this bounding number is passed around to a function
+--     should be eliminated by the inliner and do not affect runtime performance. The @ModelD@ module
+--     provides a much more usable heap implementation where the currenty heap size is stored in a 'MutVar'.
+--     It is not implemented as a 'MutVar' in here because LiquidHaskell cannot (to my knowledge)
+--     use mutable values for meaningful proofs.
+--   * This heap implements decrease-key as a part of 'push'. If you push an already existing element
+--     onto the heap, the priority of the existing one and the priority of the one you are attempting
+--     to push will be combined with the 'Monoid' instance. (Note: this could definitely be weakened
+--     to 'Semigroup'). At the moment, only bubble up is attempted after this operation, so if this
+--     causing the priority to increas, the heap becomes invalid (but not in a way that causes
+--     segfaults).
+--
+--   As a result of the third constraint, the 'Monoid' instance and 'Ord' instance of the priority type
+--   must obey these additional laws:
+--
+--   > mappend a b ≤ a
+--   > mappend a b ≤ b
+--   > mempty ≥ c
+--
+--   In more colloquial terms, the monoidal append of two priorities must be less than or equal
+--   to the smaller of the two. Additionally, 'mempty' must be the largest priority.
 
 module Data.Heap.Mutable.ModelC where
 
@@ -29,12 +66,6 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 
 {-@ type Positive = {n:Int | n > 0} @-}
 
-{-  measure mvlen :: forall a. (MVector s a) -> Int @-}
-{-  measure umvlen :: forall a. (MU.MVector s a) -> Int @-}
-{-  assume MV.unsafeWrite :: PrimMonad m => x:(MVector (PrimState m) a) -> {i:Int | i < mvlen x } -> a -> m () @-}
-{-  assume MU.unsafeWrite :: (Unbox a, PrimMonad m) => x:(MU.MVector (PrimState m) a) -> {i:Int | i < umvlen x } -> a -> m () @-}
-{-  assume MV.length :: forall a. x:(Data.Vector.MVector s a) -> {v : Nat | v = vlen x } @-}
-
 {-@ data RawHeap s p = RawHeap
       { rawHeapBound         :: Nat
       , rawHeapPriorities    :: (MutableArray s p)
@@ -46,7 +77,7 @@ data RawHeap s p = RawHeap
   { rawHeapBound         :: !Int -- ^ This bound is exclusive
   , rawHeapPriorities    :: !(MutableArray s p) -- ^ Binary tree of priorities
   , rawHeapElements      :: !(MutableByteArray s) -- ^ Binary tree of elements
-  , rawHeapInvertedIndex :: !(MutableByteArray s) -- ^ Lookup binary tree index by element
+  , rawHeapInvertedIndex :: !(MutableByteArray s) -- ^ Lookup binary tree index by element, used for increase and decrease priority
   }
 
 {-@ assume readHeapPriority :: PrimMonad m
@@ -139,18 +170,19 @@ pop h currentSize = if currentSize > 0
     return (newSize, Just (priority,element))
   else return (currentSize,Nothing)
 
-{-@ Lazy bubbleDown @-}
 {-@ bubbleDown :: (Ord p, PrimMonad m)
       => h:RawHeap (PrimState m) p
       -> bound:{bound:Positive | bound <= rawHeapBound h}
       -> m ()
 @-}
-bubbleDown :: (Ord p, PrimMonad m)
+bubbleDown :: forall p m. (Ord p, PrimMonad m)
   => RawHeap (PrimState m) p
   -> Int
   -> m ()
-bubbleDown h currentSize = go 1 where
-  go !ix = do
+bubbleDown h currentSizeX = go currentSizeX 1 where
+  {-@ go :: bnd:{bnd:Positive | bnd <= rawHeapBound h} -> ix:Positive -> m () / [bnd - ix] @-}
+  go :: Int -> Int -> m ()
+  go !currentSize !ix = do
     let leftChildIx = ix + ix
         rightChildIx = leftChildIx + 1
     if rightChildIx > currentSize
@@ -179,7 +211,7 @@ bubbleDown h currentSize = go 1 where
             myElement <- readHeapElement h currentSize ix
             childElement <- readHeapElement h currentSize childIx
             swapHeap h currentSize ix childIx
-            go childIx
+            go currentSize childIx
           else return ()
 
 {-@ unsafePush :: (Ord p, Monoid p, PrimMonad m)
@@ -196,7 +228,6 @@ unsafePush priority element currentSize h@(RawHeap bound _ _ _) = do
         let newSize = currentSize + 1
         appendElem priority element newSize h
         return newSize
-        -- return (trace "In Here!" newSize)
       else error "unsafePush: This cannot ever happen (2)"
     else if currentSize > 0
       then do

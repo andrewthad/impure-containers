@@ -22,7 +22,7 @@ library
     Data.Heap.Mutable.ModelB
     Data.Heap.Mutable.ModelC
     Data.Heap.Mutable.ModelD
-    Data.Vector.Unique
+    -- Data.Vector.Unique
     Data.Graph.Immutable
     Data.Graph.Immutable.Tagged
   other-modules:
