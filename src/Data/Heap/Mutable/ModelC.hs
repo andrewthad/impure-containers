@@ -32,7 +32,7 @@
 --     causing the priority to increas, the heap becomes invalid (but not in a way that causes
 --     segfaults).
 --
---   As a result of the third constraint, the 'Monoid' instance and 'Ord' instance of the priority type
+--   As a result of the last constraint, the 'Monoid' instance and 'Ord' instance of the priority type
 --   must obey these additional laws:
 --
 --   > mappend a b ≤ a

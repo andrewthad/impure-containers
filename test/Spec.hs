@@ -19,6 +19,8 @@ import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Debug.Trace
 
+import qualified Data.Vector as V
+import qualified Data.ArrayList.Generic as ArrayList
 import qualified Data.Heap.Mutable.ModelD as HeapD
 
 main :: IO ()
@@ -30,6 +32,9 @@ tests =
     [ testProperty "Model D Push No Crash" multipush
     , testProperty "Model D Push Pop" heapPushPop
     , testProperty "Model D List" heapMatchesList
+    ]
+  , testGroup "ArrayList"
+    [ testProperty "Insertion followed by freezing" arrayListWorks
     ]
   ]
 
@@ -82,4 +87,12 @@ heapMatchesList xs' =
       heapResSet = map (\pairs@((p,_) : _) -> (p,Set.fromList $ map snd pairs))
         $ groupBy (on (==) fst) heapRes
   in heapResSet == listRes
+
+arrayListWorks :: [Int] -> Bool
+arrayListWorks xs =
+  let ys = runST $ do
+        a <- ArrayList.new 1
+        forM_ xs $ \x -> ArrayList.push a x
+        ArrayList.freeze a
+   in xs == V.toList ys
 

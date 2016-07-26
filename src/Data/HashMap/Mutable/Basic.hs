@@ -248,7 +248,7 @@ foldM f seed0 htRef = readRef htRef >>= work
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
 -- "Data.HashTable.Class#v:mapM_".
-mapM_ :: PrimMonad m => ((k,v) -> m b) -> HashTable (PrimState m) k v -> m ()
+mapM_ :: PrimMonad m => (k -> v -> m b) -> HashTable (PrimState m) k v -> m ()
 mapM_ f htRef = readRef htRef >>= work
   where
     work (HashTable sz _ hashes keys values) = go 0
@@ -261,7 +261,7 @@ mapM_ f htRef = readRef htRef >>= work
               else do
                 k <- readArray keys i
                 v <- readArray values i
-                _ <- f (k, v)
+                _ <- f k v
                 go (i+1)
 
 
