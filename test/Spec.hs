@@ -22,6 +22,8 @@ import Debug.Trace
 import qualified Data.Vector as V
 import qualified Data.ArrayList.Generic as ArrayList
 import qualified Data.Heap.Mutable.ModelD as HeapD
+import qualified Data.Graph.Mutable as MGraph
+import qualified Data.Graph.Immutable as Graph
 
 main :: IO ()
 main = defaultMain tests
@@ -36,6 +38,9 @@ tests =
   , testGroup "ArrayList"
     [ testProperty "Insertion followed by freezing" arrayListWorks
     ]
+  , testGroup "Graph"
+    [ testProperty "Building only from vertices" graphBuildingVertices
+    ]
   ]
 
 testElements :: Int
@@ -49,7 +54,7 @@ instance Arbitrary Min where
   shrink (Min a) = fmap Min $ filter (>= 0) $ shrinkIntegral a
 
 instance Monoid Min where
-  mempty = Min 0
+  mempty = Min maxBound
   mappend (Min a) (Min b) = Min (min a b)
 
 newtype MyElement = MyElement { getMyElement :: Int }
@@ -95,4 +100,15 @@ arrayListWorks xs =
         forM_ xs $ \x -> ArrayList.push a x
         ArrayList.freeze a
    in xs == V.toList ys
+
+-- This makes sure that when you insert a bunch of vertices into
+-- a graph, you get the same vertices back out. This does not
+-- do anything to check for edges.
+graphBuildingVertices :: [Int] -> Bool
+graphBuildingVertices xs =
+  let sg = runST $ Graph.create $ \mg -> do
+        forM_ xs $ \x -> do
+          MGraph.insertVertex mg x
+      ys = Graph.with sg (Graph.verticesToVector . Graph.vertices)
+   in List.nub (List.sort xs) == List.sort (V.toList ys)
 

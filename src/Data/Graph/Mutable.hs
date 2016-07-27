@@ -1,4 +1,4 @@
-module Data.Graph.Mutable.Tagged where
+module Data.Graph.Mutable where
 
 import Data.Graph.Types
 import Control.Monad.Primitive
@@ -9,23 +9,23 @@ import Data.Primitive.MutVar
 import Data.Hashable (Hashable)
 import qualified Data.HashMap.Mutable.Basic as HashTable
 
-replicateVertex :: PrimMonad m => Size g -> v -> m (MVertices g (PrimState m) v)
-replicateVertex (Size i) v = fmap MVertices (MV.replicate i v)
+verticesReplicate :: PrimMonad m => Size g -> v -> m (MVertices g (PrimState m) v)
+verticesReplicate (Size i) v = fmap MVertices (MV.replicate i v)
 
-replicateUVertex :: (PrimMonad m, Unbox v) => Size g -> v -> m (MUVertices g (PrimState m) v)
-replicateUVertex (Size i) v = fmap MUVertices (MU.replicate i v)
+verticesUReplicate :: (PrimMonad m, Unbox v) => Size g -> v -> m (MUVertices g (PrimState m) v)
+verticesUReplicate (Size i) v = fmap MUVertices (MU.replicate i v)
 
-writeUVertex :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> v -> m ()
-writeUVertex (MUVertices mvec) (Vertex ix) v = MU.unsafeWrite mvec ix v
+verticesUWrite :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> v -> m ()
+verticesUWrite (MUVertices mvec) (Vertex ix) v = MU.unsafeWrite mvec ix v
 
-writeVertex :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> v -> m ()
-writeVertex (MVertices mvec) (Vertex ix) v = MV.unsafeWrite mvec ix v
+verticesWrite :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> v -> m ()
+verticesWrite (MVertices mvec) (Vertex ix) v = MV.unsafeWrite mvec ix v
 
-readUVertex :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> m v
-readUVertex (MUVertices mvec) (Vertex ix) = MU.unsafeRead mvec ix
+verticesURead :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> m v
+verticesURead (MUVertices mvec) (Vertex ix) = MU.unsafeRead mvec ix
 
-readVertex :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> m v
-readVertex (MVertices mvec) (Vertex ix) = MV.unsafeRead mvec ix
+verticesRead :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> m v
+verticesRead (MVertices mvec) (Vertex ix) = MV.unsafeRead mvec ix
 
 -- | This does two things:
 --
@@ -45,6 +45,7 @@ insertVertex (MGraph vertexIndex currentIdVar _) v = do
       return (Vertex currentId)
     Just i -> return (Vertex i)
 
+-- | This replaces the edge if it already exists.
 insertEdge :: PrimMonad m => MGraph g (PrimState m) e v -> Vertex g -> Vertex g -> e -> m ()
 insertEdge (MGraph _ _ edges) (Vertex a) (Vertex b) e = do
   HashTable.insert edges (IntPair a b) e
