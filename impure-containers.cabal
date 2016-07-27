@@ -1,6 +1,6 @@
 name:                impure-containers
 version:             0.1.1
-synopsis:            Initial project template from stack
+synopsis:            Mutable containers in haskell
 description:         Please see README.md
 homepage:            https://github.com/andrewthad/impure-containers#readme
 license:             BSD3
@@ -10,7 +10,6 @@ maintainer:          andrew.thaddeus@gmail.com
 copyright:           2016 Andrew Martin
 category:            web
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
 
 library
