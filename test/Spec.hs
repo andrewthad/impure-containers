@@ -2,11 +2,15 @@
 
 module Main (main) where
 
-import Test.QuickCheck                      (Gen, Arbitrary(..), choose, shrinkIntegral)
+import Test.QuickCheck                      (Gen, Arbitrary(..), choose, shrinkIntegral,
+                                             listOf, vectorOf)
 import Test.Framework                       (defaultMain, testGroup, Test)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.Framework.Providers.HUnit       (testCase)
 import Test.HUnit                           (Assertion,(@?=))
+import Data.Monoid                          (All(..))
+import Data.Traversable
+import Control.Applicative
 import Data.Coerce
 
 import Data.Word
@@ -40,6 +44,7 @@ tests =
     ]
   , testGroup "Graph"
     [ testProperty "Building only from vertices" graphBuildingVertices
+    , testProperty "Trivial case for Dijkstras Algorithm" dijkstraEasyDistance
     ]
   ]
 
@@ -63,6 +68,13 @@ newtype MyElement = MyElement { getMyElement :: Int }
 instance Arbitrary MyElement where
   arbitrary = fmap MyElement (choose (0,fromIntegral testElements - 1))
   shrink (MyElement a) = fmap MyElement $ filter (>= 0) $ shrinkIntegral a -- fmap MyElement (enumFromTo 0 (a - 1))
+
+newtype TenElemsOrLessList a = TenElemsOrLessList [a]
+  deriving (Read,Show,Eq,Ord)
+
+instance Arbitrary a => Arbitrary (TenElemsOrLessList a) where
+  arbitrary = fmap TenElemsOrLessList $ flip vectorOf arbitrary =<< choose (0 :: Int,10)
+  shrink (TenElemsOrLessList a) = fmap TenElemsOrLessList $ shrink a
 
 multipush :: [(Min,MyElement)] -> Bool
 multipush xs = runST $ do
@@ -111,4 +123,43 @@ graphBuildingVertices xs =
           MGraph.insertVertex mg x
       ys = Graph.with sg (Graph.verticesToVector . Graph.vertices)
    in List.nub (List.sort xs) == List.sort (V.toList ys)
+
+graphBuildingEdgesEverywhere :: TenElemsOrLessList Int -> Bool
+graphBuildingEdgesEverywhere (TenElemsOrLessList xs) =
+  let onlyEdge = 77 :: Int
+      sg = runST $ Graph.create $ \mg -> do
+        vertices <- forM xs $ \x -> do
+          MGraph.insertVertex mg x
+        forM_ vertices $ \source -> do
+          forM_ vertices $ \dest -> do
+            MGraph.insertEdge mg source dest onlyEdge
+   in getAll $ getConst $ Graph.with sg $ \g ->
+             let v = Graph.vertices g -- Graph.vertices g Graph.verticesToVector . Graph.vertices)
+                 vlist = Graph.verticesToVertexList v
+              in for vlist $ \va ->
+                   for vlist $ \vb ->
+                     Const (All $ Graph.lookupEdge va vb g == Just onlyEdge)
+
+data Thing = Thing
+
+-- Every node is connected to at most two other nodes. The end
+-- nodes only have one neighbor. Go from one end node to the other.
+dijkstraEasyDistance :: [Word32] -> Bool
+dijkstraEasyDistance xs =
+  let sg = runST $ Graph.create $ \mg -> do
+        start <- MGraph.insertVertex mg (0 :: Int)
+        let insertNext prevVertex zs i = case zs of
+              [] -> return ()
+              y : ys -> do
+                vertex <- MGraph.insertVertex mg i
+                MGraph.insertEdge mg prevVertex vertex y
+                insertNext vertex ys (i + 1)
+        insertNext start xs 1
+   in Graph.with sg $ \g -> case (Graph.lookupVertex 0 g, Graph.lookupVertex (List.length xs) g) of
+        (Nothing,Nothing) -> False
+        (Nothing,Just _)  -> False
+        (Just _,Nothing)  -> False
+        (Just start, Just end) ->
+          let expected = Min (sum xs)
+           in expected == Graph.dijkstra (\_ _ (Min x) distance -> Min (x + distance)) (Min 0) start end g
 

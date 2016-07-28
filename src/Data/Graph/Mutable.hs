@@ -45,8 +45,18 @@ insertVertex (MGraph vertexIndex currentIdVar _) v = do
       return (Vertex currentId)
     Just i -> return (Vertex i)
 
--- | This replaces the edge if it already exists.
+-- | This replaces the edge if it already exists. If you pass the same vertex
+--   as the source and the destination, this function has no effect.
 insertEdge :: PrimMonad m => MGraph g (PrimState m) e v -> Vertex g -> Vertex g -> e -> m ()
 insertEdge (MGraph _ _ edges) (Vertex a) (Vertex b) e = do
   HashTable.insert edges (IntPair a b) e
+
+-- | Insert edge with a function, combining the existing edge value and the old one.
+insertEdgeWith :: PrimMonad m => MGraph g (PrimState m) e v -> (e -> e -> e) -> Vertex g -> Vertex g -> e -> m ()
+insertEdgeWith (MGraph _ _ edges) combine (Vertex a) (Vertex b) e = do
+  m <- HashTable.lookup edges (IntPair a b)
+  case m of
+    Nothing -> HashTable.insert edges (IntPair a b) e
+    Just eOld -> HashTable.insert edges (IntPair a b) (combine eOld e)
+
 

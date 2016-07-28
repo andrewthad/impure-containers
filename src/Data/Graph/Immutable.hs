@@ -26,33 +26,36 @@ mapVertices = fmap
 
 dijkstra :: (Ord s, Monoid s)
   => (v -> v -> s -> e -> s)
+  -> s -- ^ Weight to assign start vertex
   -> Vertex g -- ^ start
   -> Vertex g -- ^ end
   -> Graph g e v
   -> s
-dijkstra f start end g =
-  verticesRead (dijkstraTraversal f start g) end
+dijkstra f s start end g =
+  verticesRead (dijkstraTraversal f s start g) end
 
 -- | This is a generalization of Dijkstra\'s algorithm. This function could
 --   be written without unsafely pattern matching on 'Vertex', but doing
 --   so allows us to use a faster heap implementation.
 dijkstraTraversal ::
      (Ord s, Monoid s)
-  => (v -> v -> s -> e -> s)
-  -> Vertex g
+  => (v -> v -> s -> e -> s) -- ^ Weight combining function
+  -> s -- ^ Weight to assign start vertex
+  -> Vertex g -- ^ Start vertex
   -> Graph g e v
   -> Vertices g s
-dijkstraTraversal f v0 g = runST $ do
+dijkstraTraversal f s0 v0 g = runST $ do
   let theSize = size g
       oldVertices = vertices g
   newVertices <- Mutable.verticesReplicate theSize mempty
+  Mutable.verticesWrite newVertices v0 s0
   visited <- Mutable.verticesUReplicate theSize False
   heap <- Heap.new (unSize theSize)
   -- Using getVertex casts Vertex to Int. This is safe to do,
   -- but going from Int to Vertex (done later) is normally unsafe.
   -- We know it's ok in this case because the min heap does not
   -- create Ints that we did not push onto it.
-  Heap.unsafePush mempty (getVertexInternal v0) heap
+  Heap.unsafePush s0 (getVertexInternal v0) heap
   let go = do
         m <- Heap.pop heap
         case m of
@@ -132,6 +135,12 @@ unSize (Size s) = s
 
 vertexInt :: Vertex g -> Int
 vertexInt (Vertex i) = i
+
+verticesToVertexList :: Vertices g v -> [Vertex g]
+verticesToVertexList (Vertices v) = map Vertex (take (V.length v) [0..])
+
+verticesTraverse_ :: Monad m => (Vertex g -> v -> m a) -> Vertices g v -> m ()
+verticesTraverse_ f (Vertices v) = V.imapM_ (\i -> f (Vertex i)) v
 
 verticesToVector :: Vertices g v -> Vector v
 verticesToVector (Vertices v) = v
