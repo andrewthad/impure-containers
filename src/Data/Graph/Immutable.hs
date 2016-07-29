@@ -6,12 +6,14 @@ module Data.Graph.Immutable where
 
 import Data.Graph.Types
 import Control.Monad.Primitive
+import Data.Foldable
 import Data.Vector (Vector)
 import Data.Vector.Mutable (MVector)
 import Control.Monad
 import Data.Word
 import Control.Monad.ST (runST)
 import Data.Primitive.MutVar
+import Data.Coerce (coerce)
 import qualified Data.Graph.Mutable as Mutable
 import qualified Data.ArrayList.Generic as ArrayList
 import qualified Data.HashMap.Mutable.Basic as HashTable
@@ -21,8 +23,8 @@ import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 
-mapVertices :: (v -> w) -> Graph g e v -> Graph g e w
-mapVertices = fmap
+-- mapVertices :: (v -> w) -> Graph g e v -> Graph g e w
+-- mapVertices = fmap
 
 dijkstra :: (Ord s, Monoid s)
   => (v -> v -> s -> e -> s)
@@ -85,15 +87,37 @@ dijkstraTraversal f s0 v0 g = runST $ do
 lookupVertex :: Eq v => v -> Graph g e v -> Maybe (Vertex g)
 lookupVertex val (Graph g) = fmap Vertex (V.elemIndex val (graphVertices g))
 
+-- | Not the same as fmap because the function also takes the vertex id.
+mapVertices :: (Vertex g -> a -> b) -> Graph g e a -> Graph g e b
+mapVertices f (Graph sg) = Graph sg
+  { graphVertices = V.imap (coerce f) (graphVertices sg) }
+
+traverseVertices_ :: Applicative m => (Vertex g -> v -> m a) -> Graph g e v -> m ()
+traverseVertices_ f g = verticesTraverse_ f (vertices g)
+
+-- | This traverses every edge in the entire graph.
+traverseEdges_ :: Applicative m
+  => (e -> Vertex g -> Vertex g -> v -> v -> m a)
+  -> Graph g e v
+  -> m ()
+traverseEdges_ f g =
+  let allVertices = vertices g
+   in verticesTraverse_
+        (\vertex value -> traverseNeighbors_
+          (\e neighborVertex neighborValue -> f e vertex neighborVertex value neighborValue)
+          vertex g
+        ) allVertices
+
+-- | Change this to use unsafeRead some time soon.
 traverseNeighbors_ :: Applicative m
   => (e -> Vertex g -> v -> m a)
   -> Vertex g
   -> Graph g e v
   -> m ()
 traverseNeighbors_ f (Vertex x) (Graph g) =
-  let allVertices = graphVertices g
-      theVertices = graphOutboundNeighborVertices g V.! x
-      edges    = graphOutboundNeighborEdges g V.! x
+  let allVertices  = graphVertices g
+      theVertices  = graphOutboundNeighborVertices g V.! x
+      edges        = graphOutboundNeighborEdges g V.! x
       numNeighbors = U.length theVertices
       go !i = if i < numNeighbors
         then let vertexNum = theVertices U.! i
@@ -139,8 +163,17 @@ vertexInt (Vertex i) = i
 verticesToVertexList :: Vertices g v -> [Vertex g]
 verticesToVertexList (Vertices v) = map Vertex (take (V.length v) [0..])
 
-verticesTraverse_ :: Monad m => (Vertex g -> v -> m a) -> Vertices g v -> m ()
-verticesTraverse_ f (Vertices v) = V.imapM_ (\i -> f (Vertex i)) v
+-- | This is currently inefficient. If an @itraverse@ gets added
+--   to @vector@, this can be made faster.
+verticesTraverse :: Applicative m => (Vertex g -> v -> m a) -> Vertices g v -> m (Vertices g a)
+verticesTraverse f (Vertices v) = fmap (Vertices . V.fromList) $ traverse (\(i,b) -> f (Vertex i) b) (zip [0..] (V.toList v))
+  -- Vertices (V.imapM (\i -> f (Vertex i)) v)
+
+-- | This is currently inefficient. If an @itraverse@ gets added
+--   to @vector@, this can be made faster.
+verticesTraverse_ :: Applicative m => (Vertex g -> v -> m a) -> Vertices g v -> m ()
+verticesTraverse_ f (Vertices v) = traverse_ (\(i,b) -> f (Vertex i) b) (zip [0..] (V.toList v))
+  -- V.imapM_ (\i -> f (Vertex i)) v
 
 verticesToVector :: Vertices g v -> Vector v
 verticesToVector (Vertices v) = v
