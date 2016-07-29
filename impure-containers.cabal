@@ -1,5 +1,5 @@
 name:                impure-containers
-version:             0.2
+version:             0.3
 synopsis:            Mutable containers in haskell
 description:         Please see README.md
 homepage:            https://github.com/andrewthad/impure-containers#readme
