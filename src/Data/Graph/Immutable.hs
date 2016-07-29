@@ -68,7 +68,7 @@ dijkstraTraversal f s0 v0 g = runST $ do
                 value = verticesRead oldVertices vertex
             Mutable.verticesUWrite visited vertex True
             Mutable.verticesWrite newVertices vertex s
-            traverseNeighbors_ (\theEdge neighborVertex neighborValue -> do
+            traverseNeighbors_ (\neighborVertex neighborValue theEdge -> do
                 alreadyVisited <- Mutable.verticesURead visited neighborVertex
                 when (not alreadyVisited) $ Heap.unsafePush
                   (f value neighborValue s theEdge)
@@ -97,20 +97,20 @@ traverseVertices_ f g = verticesTraverse_ f (vertices g)
 
 -- | This traverses every edge in the entire graph.
 traverseEdges_ :: Applicative m
-  => (e -> Vertex g -> Vertex g -> v -> v -> m a)
+  => (Vertex g -> Vertex g -> v -> v -> e -> m a)
   -> Graph g e v
   -> m ()
 traverseEdges_ f g =
   let allVertices = vertices g
    in verticesTraverse_
         (\vertex value -> traverseNeighbors_
-          (\e neighborVertex neighborValue -> f e vertex neighborVertex value neighborValue)
+          (\neighborVertex neighborValue e -> f vertex neighborVertex value neighborValue e)
           vertex g
         ) allVertices
 
 -- | Change this to use unsafeRead some time soon.
 traverseNeighbors_ :: Applicative m
-  => (e -> Vertex g -> v -> m a)
+  => (Vertex g -> v -> e -> m a)
   -> Vertex g
   -> Graph g e v
   -> m ()
@@ -123,7 +123,7 @@ traverseNeighbors_ f (Vertex x) (Graph g) =
         then let vertexNum = theVertices U.! i
                  vertexVal = allVertices V.! vertexNum
                  edgeVal = edges V.! i
-              in f edgeVal (Vertex vertexNum) vertexVal *> go (i + 1)
+              in f (Vertex vertexNum) vertexVal edgeVal *> go (i + 1)
         else pure ()
    in go 0
 
