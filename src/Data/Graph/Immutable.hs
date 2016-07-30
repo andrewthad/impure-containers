@@ -23,9 +23,6 @@ import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 
--- mapVertices :: (v -> w) -> Graph g e v -> Graph g e w
--- mapVertices = fmap
-
 dijkstra :: (Ord s, Monoid s)
   => (v -> v -> s -> e -> s)
   -> s -- ^ Weight to assign start vertex
