@@ -8,17 +8,28 @@ import Data.Primitive.ByteArray
 import Data.Primitive.Array
 import Data.Word
 import GHC.TypeLits
-
-data Thing (a :: Nat) = Thing
+import Data.Primitive.PrimArray
 
 newtype BoolPositiveArray s = BoolBinTree (MutableByteArray s)
 newtype ValuePositiveArray s a = ValuePositiveArray (MutableArray s a)
-newtype BoolArray s = BoolArray (MutableByteArray s)
+
+newtype BoolArray s = BoolArray (MutablePrimArray s Word8)
 newtype TrieArray s k v = TrieArray (MutableArray s (Trie s k v))
+
+{-@
 
 data Trie s k v = Trie
   { trieHasValue :: !(BoolPositiveArray s)
-  , trieValue    :: !(ValuePositiveArray s v)
+  , trieValue    :: !(MutableArray s v)
+  , trieHasChild :: !(BoolArray s)
+  , trieChildren :: !(TrieArray s k v)
+  }
+
+@-}
+
+data Trie s k v = Trie
+  { trieHasValue :: !(BoolArray s)
+  , trieValue    :: !(MutableArray s v)
   , trieHasChild :: !(BoolArray s)
   , trieChildren :: !(TrieArray s k v)
   }
@@ -30,7 +41,6 @@ theSize = 16
 
 {-@ type Positive = {n:Int|n > 0} @-}
 {-@ type Index = {n:Int|n > 0} @-}
-
 
 -- | All initialized to false
 newBoolArray :: PrimMonad m => m (BoolArray (PrimState m))
@@ -49,13 +59,13 @@ word8Zero w = w == 0
 {-# INLINE word8Zero #-}
 
 {-@ writeBoolArray :: BoolArray (PrimState m) -> {n:Positive |n < theSize}  -> Bool -> m () @-}
-writeBoolPositiveArray :: PrimMonad m => BoolArray (PrimState m) -> Int -> Bool -> m ()
-writeBoolPositiveArray (BoolArray m) i b = writeByteArray m i (boolToWord8 b)
+writeBoolArray :: PrimMonad m => BoolArray (PrimState m) -> Int -> Bool -> m ()
+writeBoolArray (BoolArray m) i b = writePrimArray m i (boolToWord8 b)
 {-# INLINE writeBoolArray #-}
 
-readBoolPositiveArray :: PrimMonad m => BoolArray (PrimState m) -> Int -> m Bool
-readBoolPositiveArray (BoolArray m) i = do
-  v <- readByteArray m i
+readBoolArray :: PrimMonad m => BoolArray (PrimState m) -> Int -> m Bool
+readBoolArray (BoolArray m) i = do
+  v <- readPrimArray m i
   return $ if word8Zero v
     then False
     else True

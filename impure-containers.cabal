@@ -28,10 +28,12 @@ library
     -- Data.Vector.Unique
     Data.Graph.Immutable
     Data.Graph.Mutable
-    Data.Trie.Mutable.Bits
+    -- Data.Trie.Mutable.Bits
     Data.ArrayList.Generic
     Data.Graph.Types
-    Data.Containers.Impure.Internal
+    Data.Primitive.PrimArray
+    Data.Primitive.Bool
+    -- Data.Containers.Impure.Internal
   other-modules:
     Data.HashMap.Mutable.Internal.Array
     Data.HashMap.Mutable.Internal.CacheLine
