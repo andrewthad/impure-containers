@@ -1,7 +1,14 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE UnboxedTuples #-}
 
-module Data.Primitive.PrimArray where
+module Data.Primitive.PrimArray 
+  ( MutablePrimArray(..)
+  , newPrimArray
+  , readPrimArray
+  , writePrimArray
+  , sizeofMutablePrimArray
+  , setPrimArray
+  ) where
 
 import Control.Monad.Primitive
 import Data.Primitive.ByteArray
