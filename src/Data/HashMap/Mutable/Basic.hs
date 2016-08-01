@@ -2,6 +2,22 @@
 {-# LANGUAGE CPP          #-}
 {-# LANGUAGE MagicHash    #-}
 
+-- | This whole module is mostly copied from the
+--   <http://hackage.haskell.org/package/hashtables hashtables> package.
+--   You can find much better documentation there. Additionally, if you
+--   problem in the implementation of a function, you should probably open
+--   up the issue on the <https://github.com/gregorycollins/hashtables hashtables github repo>
+--   since Gregory is the one who actually authored (and the one who
+--   actually understands) this code. The main differences are as follows:
+--
+--   * The type is named @MHashMap@ instead of @HashTable@.
+--   * All functions are generalized to work in any 'PrimMonad' instead
+--     of only 'ST'.
+--   * The functions 'mapM_' and 'foldM' have been curried. They do not
+--     take tuples here.
+--   * There is no type class used to overload the hashtable operations.
+--
+
 module Data.HashMap.Mutable.Basic
   ( MHashMap
   , new
@@ -82,17 +98,10 @@ instance Show (MHashMap s k v) where
     show _ = "<MHashMap>"
 
 
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:new".
 new :: PrimMonad m => m (MHashMap (PrimState m) k v)
 new = newSized 1
 {-# INLINE new #-}
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:newSized".
 newSized :: PrimMonad m => Int -> m (MHashMap (PrimState m) k v)
 newSized n = do
     debug $ "entering: newSized " ++ show n
@@ -101,8 +110,6 @@ newSized n = do
     newRef ht
 {-# INLINE newSized #-}
 
-
-------------------------------------------------------------------------------
 newSizedReal :: PrimMonad m => Int -> m (HashTable_ (PrimState m) k v)
 newSizedReal m = do
     -- make sure the hash array is a multiple of cache-line sized so we can
@@ -115,10 +122,6 @@ newSizedReal m = do
     ld <- newSizeRefs
     return $! MHashMap m ld h k v
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:delete".
 delete :: (PrimMonad m, Hashable k, Eq k) =>
           (MHashMap (PrimState m) k v)
        -> k
@@ -132,10 +135,6 @@ delete htRef k = do
     !h = hash k
 {-# INLINE delete #-}
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:lookup".
 lookup :: (PrimMonad m, Eq k, Hashable k) => (MHashMap (PrimState m) k v) -> k -> m (Maybe v)
 lookup htRef !k = do
     ht <- readRef htRef
@@ -184,10 +183,6 @@ lookup htRef !k = do
                            else go (idx + 1) start end
 {-# INLINE lookup #-}
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:insert".
 insert :: (PrimMonad m, Eq k, Hashable k) =>
           (MHashMap (PrimState m) k v)
        -> k
@@ -224,11 +219,7 @@ insert htRef !k !v = do
         values = _values ht
 {-# INLINE insert #-}
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:foldM".
-foldM :: PrimMonad m => (a -> (k,v) -> m a) -> a -> MHashMap (PrimState m) k v -> m a
+foldM :: PrimMonad m => (a -> k -> v -> m a) -> a -> MHashMap (PrimState m) k v -> m a
 foldM f seed0 htRef = readRef htRef >>= work
   where
     work (MHashMap sz _ hashes keys values) = go 0 seed0
@@ -241,13 +232,9 @@ foldM f seed0 htRef = readRef htRef >>= work
               else do
                 k <- readArray keys i
                 v <- readArray values i
-                !seed' <- f seed (k, v)
+                !seed' <- f seed k v
                 go (i+1) seed'
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:mapM_".
 mapM_ :: PrimMonad m => (k -> v -> m b) -> MHashMap (PrimState m) k v -> m ()
 mapM_ f htRef = readRef htRef >>= work
   where
@@ -264,10 +251,6 @@ mapM_ f htRef = readRef htRef >>= work
                 _ <- f k v
                 go (i+1)
 
-
-------------------------------------------------------------------------------
--- | See the documentation for this function in
--- "Data.MHashMap.Class#v:computeOverhead".
 computeOverhead :: PrimMonad m => MHashMap (PrimState m) k v -> m Double
 computeOverhead htRef = readRef htRef >>= work
   where
