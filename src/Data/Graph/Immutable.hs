@@ -2,6 +2,13 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE RankNTypes    #-}
 
+-- | This module provides a safe and performant way to perform
+--   operations on graphs. The types 'Graph', 'Vertex', 'Vertices'
+--   and 'Size' are all parameterized by a phantom type variable @g@.
+--   Much like the @s@ used with @ST@, this type variable will
+--   always be free. It gives us a guarentee about the number of
+--   vertices in a graph.
+
 module Data.Graph.Immutable where
 
 import Data.Graph.Types
@@ -23,64 +30,7 @@ import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 
-dijkstra :: (Ord s, Monoid s)
-  => (v -> v -> s -> e -> s)
-  -> s -- ^ Weight to assign start vertex
-  -> Vertex g -- ^ start
-  -> Vertex g -- ^ end
-  -> Graph g e v
-  -> s
-dijkstra f s start end g =
-  verticesRead (dijkstraTraversal f s start g) end
-
--- | This is a generalization of Dijkstra\'s algorithm. This function could
---   be written without unsafely pattern matching on 'Vertex', but doing
---   so allows us to use a faster heap implementation.
-dijkstraTraversal ::
-     (Ord s, Monoid s)
-  => (v -> v -> s -> e -> s) -- ^ Weight combining function
-  -> s -- ^ Weight to assign start vertex
-  -> Vertex g -- ^ Start vertex
-  -> Graph g e v
-  -> Vertices g s
-dijkstraTraversal f s0 v0 g = runST $ do
-  let theSize = size g
-      oldVertices = vertices g
-  newVertices <- Mutable.verticesReplicate theSize mempty
-  Mutable.verticesWrite newVertices v0 s0
-  visited <- Mutable.verticesUReplicate theSize False
-  heap <- Heap.new (unSize theSize)
-  -- Using getVertex casts Vertex to Int. This is safe to do,
-  -- but going from Int to Vertex (done later) is normally unsafe.
-  -- We know it's ok in this case because the min heap does not
-  -- create Ints that we did not push onto it.
-  Heap.unsafePush s0 (getVertexInternal v0) heap
-  let go = do
-        m <- Heap.pop heap
-        case m of
-          Nothing -> return True
-          Just (s,unwrappedVertexIx) -> do
-            -- Unsafe cast from Int to Vertex
-            let vertex = Vertex unwrappedVertexIx
-                value = verticesRead oldVertices vertex
-            Mutable.verticesUWrite visited vertex True
-            Mutable.verticesWrite newVertices vertex s
-            traverseNeighbors_ (\neighborVertex neighborValue theEdge -> do
-                alreadyVisited <- Mutable.verticesURead visited neighborVertex
-                when (not alreadyVisited) $ Heap.unsafePush
-                  (f value neighborValue s theEdge)
-                  -- Casting from Vertex to Int
-                  (getVertexInternal neighborVertex)
-                  heap
-              ) vertex g
-            return False
-      runMe = do
-        isDone <- go
-        if isDone then return () else runMe
-  runMe
-  newVerticesFrozen <- verticesFreeze newVertices
-  return newVerticesFrozen
-
+-- | Lookup a 'Vertex' by its label.
 lookupVertex :: Eq v => v -> Graph g e v -> Maybe (Vertex g)
 lookupVertex val (Graph g) = fmap Vertex (V.elemIndex val (graphVertices g))
 
@@ -224,15 +174,60 @@ create f = do
 with :: SomeGraph e v -> (forall g. Graph g e v -> a) -> a
 with sg f = f (Graph sg)
 
--- data Edge g = Edge
---   { edgeVertexA :: !Int
---   , edgeVertexB :: !Int
---   }
+dijkstra :: (Ord s, Monoid s)
+  => (v -> v -> s -> e -> s)
+  -> s -- ^ Weight to assign start vertex
+  -> Vertex g -- ^ start
+  -> Vertex g -- ^ end
+  -> Graph g e v
+  -> s
+dijkstra f s start end g =
+  verticesRead (dijkstraTraversal f s start g) end
 
--- instance Functor (Graph g e) where
---   fmap f g = g { graphVertices = Vector.map (graphVertices g) }
-
--- visited,allowed,notAllowed :: Word8
--- visited = 2
--- allowed = 1
--- notAllowed = 0
+-- | This is a generalization of Dijkstra\'s algorithm. This function could
+--   be written without unsafely pattern matching on 'Vertex', but doing
+--   so allows us to use a faster heap implementation.
+dijkstraTraversal ::
+     (Ord s, Monoid s)
+  => (v -> v -> s -> e -> s) -- ^ Weight combining function
+  -> s -- ^ Weight to assign start vertex
+  -> Vertex g -- ^ Start vertex
+  -> Graph g e v
+  -> Vertices g s
+dijkstraTraversal f s0 v0 g = runST $ do
+  let theSize = size g
+      oldVertices = vertices g
+  newVertices <- Mutable.verticesReplicate theSize mempty
+  Mutable.verticesWrite newVertices v0 s0
+  visited <- Mutable.verticesUReplicate theSize False
+  heap <- Heap.new (unSize theSize)
+  -- Using getVertex casts Vertex to Int. This is safe to do,
+  -- but going from Int to Vertex (done later) is normally unsafe.
+  -- We know it's ok in this case because the min heap does not
+  -- create Ints that we did not push onto it.
+  Heap.unsafePush s0 (getVertexInternal v0) heap
+  let go = do
+        m <- Heap.pop heap
+        case m of
+          Nothing -> return True
+          Just (s,unwrappedVertexIx) -> do
+            -- Unsafe cast from Int to Vertex
+            let vertex = Vertex unwrappedVertexIx
+                value = verticesRead oldVertices vertex
+            Mutable.verticesUWrite visited vertex True
+            Mutable.verticesWrite newVertices vertex s
+            traverseNeighbors_ (\neighborVertex neighborValue theEdge -> do
+                alreadyVisited <- Mutable.verticesURead visited neighborVertex
+                when (not alreadyVisited) $ Heap.unsafePush
+                  (f value neighborValue s theEdge)
+                  -- Casting from Vertex to Int
+                  (getVertexInternal neighborVertex)
+                  heap
+              ) vertex g
+            return False
+      runMe = do
+        isDone <- go
+        if isDone then return () else runMe
+  runMe
+  newVerticesFrozen <- verticesFreeze newVertices
+  return newVerticesFrozen

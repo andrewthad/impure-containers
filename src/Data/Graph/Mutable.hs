@@ -1,4 +1,18 @@
-module Data.Graph.Mutable where
+module Data.Graph.Mutable
+  ( -- * Graph Operations
+    -- $mutgraph
+    insertVertex
+  , insertEdge
+  , insertEdgeWith
+    -- * Vertices Operations
+    -- $mutvertices
+  , verticesReplicate
+  , verticesUReplicate
+  , verticesWrite
+  , verticesUWrite
+  , verticesRead
+  , verticesURead
+  ) where
 
 import Data.Graph.Types
 import Control.Monad.Primitive
@@ -9,23 +23,10 @@ import Data.Primitive.MutVar
 import Data.Hashable (Hashable)
 import qualified Data.HashMap.Mutable.Basic as HashTable
 
-verticesReplicate :: PrimMonad m => Size g -> v -> m (MVertices g (PrimState m) v)
-verticesReplicate (Size i) v = fmap MVertices (MV.replicate i v)
-
-verticesUReplicate :: (PrimMonad m, Unbox v) => Size g -> v -> m (MUVertices g (PrimState m) v)
-verticesUReplicate (Size i) v = fmap MUVertices (MU.replicate i v)
-
-verticesUWrite :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> v -> m ()
-verticesUWrite (MUVertices mvec) (Vertex ix) v = MU.unsafeWrite mvec ix v
-
-verticesWrite :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> v -> m ()
-verticesWrite (MVertices mvec) (Vertex ix) v = MV.unsafeWrite mvec ix v
-
-verticesURead :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> m v
-verticesURead (MUVertices mvec) (Vertex ix) = MU.unsafeRead mvec ix
-
-verticesRead :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> m v
-verticesRead (MVertices mvec) (Vertex ix) = MV.unsafeRead mvec ix
+-- | $mutgraph
+-- Operations that mutate a 'MGraph'. Vertices and edges can both be added,
+-- and edges can be deleted, but vertices cannot be deleted. Providing such
+-- an operation would undermine the safety that this library provides.
 
 -- | This does two things:
 --
@@ -59,4 +60,32 @@ insertEdgeWith (MGraph _ _ edges) combine (Vertex a) (Vertex b) e = do
     Nothing -> HashTable.insert edges (IntPair a b) e
     Just eOld -> HashTable.insert edges (IntPair a b) (combine eOld e)
 
+-- | $mutvertices
+-- Operations that mutate a 'MVertices' or a 'MUVertices'. These functions have nothing
+-- to do with 'MGraph' and are not usually needed by end users of this library. They
+-- are useful for users writing algorithms that need to mark vertices in a graph as
+-- it is traversed.
+--
+-- All of these operations are
+-- wrappers around operations from @Data.Vector.Mutable@ and @Data.Vector.Unbox.Mutable@.
+-- As long as you do not import @Data.Graph.Types.Internal@, this library guarentees that
+-- these operations will not fail at runtime.
+
+verticesReplicate :: PrimMonad m => Size g -> v -> m (MVertices g (PrimState m) v)
+verticesReplicate (Size i) v = fmap MVertices (MV.replicate i v)
+
+verticesUReplicate :: (PrimMonad m, Unbox v) => Size g -> v -> m (MUVertices g (PrimState m) v)
+verticesUReplicate (Size i) v = fmap MUVertices (MU.replicate i v)
+
+verticesUWrite :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> v -> m ()
+verticesUWrite (MUVertices mvec) (Vertex ix) v = MU.unsafeWrite mvec ix v
+
+verticesWrite :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> v -> m ()
+verticesWrite (MVertices mvec) (Vertex ix) v = MV.unsafeWrite mvec ix v
+
+verticesURead :: (PrimMonad m, Unbox v) => MUVertices g (PrimState m) v -> Vertex g -> m v
+verticesURead (MUVertices mvec) (Vertex ix) = MU.unsafeRead mvec ix
+
+verticesRead :: PrimMonad m => MVertices g (PrimState m) v -> Vertex g -> m v
+verticesRead (MVertices mvec) (Vertex ix) = MV.unsafeRead mvec ix
 
