@@ -3,7 +3,7 @@
 {-# LANGUAGE MagicHash    #-}
 
 module Data.HashMap.Mutable.Basic
-  ( HashTable
+  ( MHashMap
   , new
   , newSized
   , delete
@@ -40,7 +40,7 @@ import           Data.HashMap.Mutable.Internal.Utils
 
 ------------------------------------------------------------------------------
 -- | An open addressing hash table using linear probing.
-newtype HashTable s k v = HT (MutVar s (HashTable_ s k v))
+newtype MHashMap s k v = HT (MutVar s (HashTable_ s k v))
 
 type SizeRefs s = A.MutableByteArray s
 
@@ -67,7 +67,7 @@ newSizeRefs = do
     return a
 
 
-data HashTable_ s k v = HashTable
+data HashTable_ s k v = MHashMap
     { _size   :: {-# UNPACK #-} !Int
     , _load   :: !(SizeRefs s)   -- ^ 2-element array, stores how many entries
                                   -- and deleted entries are in the table.
@@ -78,22 +78,22 @@ data HashTable_ s k v = HashTable
 
 
 ------------------------------------------------------------------------------
-instance Show (HashTable s k v) where
-    show _ = "<HashTable>"
+instance Show (MHashMap s k v) where
+    show _ = "<MHashMap>"
 
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:new".
-new :: PrimMonad m => m (HashTable (PrimState m) k v)
+-- "Data.MHashMap.Class#v:new".
+new :: PrimMonad m => m (MHashMap (PrimState m) k v)
 new = newSized 1
 {-# INLINE new #-}
 
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:newSized".
-newSized :: PrimMonad m => Int -> m (HashTable (PrimState m) k v)
+-- "Data.MHashMap.Class#v:newSized".
+newSized :: PrimMonad m => Int -> m (MHashMap (PrimState m) k v)
 newSized n = do
     debug $ "entering: newSized " ++ show n
     let m = nextBestPrime $ ceiling (fromIntegral n / maxLoad)
@@ -113,14 +113,14 @@ newSizedReal m = do
     k  <- newArray m undefined
     v  <- newArray m undefined
     ld <- newSizeRefs
-    return $! HashTable m ld h k v
+    return $! MHashMap m ld h k v
 
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:delete".
+-- "Data.MHashMap.Class#v:delete".
 delete :: (PrimMonad m, Hashable k, Eq k) =>
-          (HashTable (PrimState m) k v)
+          (MHashMap (PrimState m) k v)
        -> k
        -> m ()
 delete htRef k = do
@@ -135,13 +135,13 @@ delete htRef k = do
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:lookup".
-lookup :: (PrimMonad m, Eq k, Hashable k) => (HashTable (PrimState m) k v) -> k -> m (Maybe v)
+-- "Data.MHashMap.Class#v:lookup".
+lookup :: (PrimMonad m, Eq k, Hashable k) => (MHashMap (PrimState m) k v) -> k -> m (Maybe v)
 lookup htRef !k = do
     ht <- readRef htRef
     lookup' ht
   where
-    lookup' (HashTable sz _ hashes keys values) = do
+    lookup' (MHashMap sz _ hashes keys values) = do
         let !b = whichBucket h sz
         debug $ "lookup h=" ++ show h ++ " sz=" ++ show sz ++ " b=" ++ show b
         go b 0 sz
@@ -187,9 +187,9 @@ lookup htRef !k = do
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:insert".
+-- "Data.MHashMap.Class#v:insert".
 insert :: (PrimMonad m, Eq k, Hashable k) =>
-          (HashTable (PrimState m) k v)
+          (MHashMap (PrimState m) k v)
        -> k
        -> v
        -> m ()
@@ -227,11 +227,11 @@ insert htRef !k !v = do
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:foldM".
-foldM :: PrimMonad m => (a -> (k,v) -> m a) -> a -> HashTable (PrimState m) k v -> m a
+-- "Data.MHashMap.Class#v:foldM".
+foldM :: PrimMonad m => (a -> (k,v) -> m a) -> a -> MHashMap (PrimState m) k v -> m a
 foldM f seed0 htRef = readRef htRef >>= work
   where
-    work (HashTable sz _ hashes keys values) = go 0 seed0
+    work (MHashMap sz _ hashes keys values) = go 0 seed0
       where
         go !i !seed | i >= sz = return seed
                     | otherwise = do
@@ -247,11 +247,11 @@ foldM f seed0 htRef = readRef htRef >>= work
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:mapM_".
-mapM_ :: PrimMonad m => (k -> v -> m b) -> HashTable (PrimState m) k v -> m ()
+-- "Data.MHashMap.Class#v:mapM_".
+mapM_ :: PrimMonad m => (k -> v -> m b) -> MHashMap (PrimState m) k v -> m ()
 mapM_ f htRef = readRef htRef >>= work
   where
-    work (HashTable sz _ hashes keys values) = go 0
+    work (MHashMap sz _ hashes keys values) = go 0
       where
         go !i | i >= sz = return ()
               | otherwise = do
@@ -267,11 +267,11 @@ mapM_ f htRef = readRef htRef >>= work
 
 ------------------------------------------------------------------------------
 -- | See the documentation for this function in
--- "Data.HashTable.Class#v:computeOverhead".
-computeOverhead :: PrimMonad m => HashTable (PrimState m) k v -> m Double
+-- "Data.MHashMap.Class#v:computeOverhead".
+computeOverhead :: PrimMonad m => MHashMap (PrimState m) k v -> m Double
 computeOverhead htRef = readRef htRef >>= work
   where
-    work (HashTable sz' loadRef _ _ _) = do
+    work (MHashMap sz' loadRef _ _ _) = do
         !ld <- readLoad loadRef
         let k = fromIntegral ld / sz
         return $ constOverhead/sz + (2 + 2*ws*(1-k)) / (k * ws)
@@ -319,7 +319,7 @@ insertRecord !sz !hashes !keys !values !h !key !value = do
 checkOverflow :: (PrimMonad m, Eq k, Hashable k) =>
                  (HashTable_ (PrimState m) k v)
               -> m (HashTable_ (PrimState m) k v)
-checkOverflow ht@(HashTable sz ldRef _ _ _) = do
+checkOverflow ht@(MHashMap sz ldRef _ _ _) = do
     !ld <- readLoad ldRef
     let !ld' = ld + 1
     writeLoad ldRef ld'
@@ -341,10 +341,10 @@ checkOverflow ht@(HashTable sz ldRef _ _ _) = do
 
 ------------------------------------------------------------------------------
 rehashAll :: (Hashable k, PrimMonad m) => HashTable_ (PrimState m) k v -> Int -> m (HashTable_ (PrimState m) k v)
-rehashAll (HashTable sz loadRef hashes keys values) sz' = do
+rehashAll (MHashMap sz loadRef hashes keys values) sz' = do
     debug $ "rehashing: old size " ++ show sz ++ ", new size " ++ show sz'
     ht' <- newSizedReal sz'
-    let (HashTable _ loadRef' newHashes newKeys newValues) = ht'
+    let (MHashMap _ loadRef' newHashes newKeys newValues) = ht'
     readLoad loadRef >>= writeLoad loadRef'
     rehash newHashes newKeys newValues
     return ht'
@@ -365,7 +365,7 @@ rehashAll (HashTable sz loadRef hashes keys values) sz' = do
 
 ------------------------------------------------------------------------------
 growTable :: (Hashable k, PrimMonad m) => HashTable_ (PrimState m) k v -> m (HashTable_ (PrimState m) k v)
-growTable ht@(HashTable sz _ _ _ _) = do
+growTable ht@(MHashMap sz _ _ _ _) = do
     let !sz' = bumpSize maxLoad sz
     rehashAll ht sz'
 
@@ -395,7 +395,7 @@ delete' :: (PrimMonad m, Hashable k, Eq k) =>
         -> k
         -> Int
         -> m Int
-delete' (HashTable sz loadRef hashes keys values) clearOut k h = do
+delete' (MHashMap sz loadRef hashes keys values) clearOut k h = do
     debug $ "delete': h=" ++ show h ++ " he=" ++ show he
             ++ " sz=" ++ show sz ++ " b0=" ++ show b0
     pair@(found, slot) <- go mempty b0 False
@@ -551,15 +551,15 @@ hashToElem !h = out
 
 
 ------------------------------------------------------------------------------
-newRef :: PrimMonad m => HashTable_ (PrimState m) k v -> m (HashTable (PrimState m) k v)
+newRef :: PrimMonad m => HashTable_ (PrimState m) k v -> m (MHashMap (PrimState m) k v)
 newRef = liftM HT . newMutVar
 {-# INLINE newRef #-}
 
-writeRef :: PrimMonad m => HashTable (PrimState m) k v -> HashTable_ (PrimState m) k v -> m ()
+writeRef :: PrimMonad m => MHashMap (PrimState m) k v -> HashTable_ (PrimState m) k v -> m ()
 writeRef (HT ref) ht = writeMutVar ref ht
 {-# INLINE writeRef #-}
 
-readRef :: PrimMonad m => HashTable (PrimState m) k v -> m (HashTable_ (PrimState m) k v)
+readRef :: PrimMonad m => MHashMap (PrimState m) k v -> m (HashTable_ (PrimState m) k v)
 readRef (HT ref) = readMutVar ref
 {-# INLINE readRef #-}
 

@@ -4,7 +4,7 @@
 {-# LANGUAGE BangPatterns  #-}
 module Data.Graph.Types where
 
-import Data.HashMap.Mutable.Basic (HashTable)
+import Data.HashMap.Mutable.Basic (MHashMap)
 import Data.Vector (Vector,MVector)
 import Data.Primitive.MutVar (MutVar)
 import Data.Hashable (Hashable)
@@ -42,8 +42,8 @@ data IntPair = IntPair !Int !Int
 instance Hashable IntPair
 
 data MGraph g s e v = MGraph
-  { mgraphVertexIndex :: !(HashTable s v Int)
+  { mgraphVertexIndex :: !(MHashMap s v Int)
   , mgraphCurrentId :: !(MutVar s Int)
-  , mgraphEdges :: !(HashTable s IntPair e)
+  , mgraphEdges :: !(MHashMap s IntPair e)
   }
 
