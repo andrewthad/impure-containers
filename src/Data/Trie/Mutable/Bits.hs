@@ -64,7 +64,7 @@ insertPrefix :: (FiniteBits k, PrimMonad m)
   -> k -- ^ prefix key
   -> v -- ^ value
   -> m ()
-insertPrefix theTrie theSig theKey value = 
+insertPrefix theTrie theSig theKey value =
   if theSig > totalBits
     then return ()
     else go theSig theKey theTrie
@@ -89,5 +89,5 @@ insertPrefix theTrie theSig theKey value =
         Just nextTrie -> return nextTrie
       go (significant - 1) (unsafeShiftL key 1) nextTrie
     else writeMutMaybeVar valRef (Just value)
-    
+
 

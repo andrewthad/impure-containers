@@ -10,8 +10,10 @@ import Test.Framework.Providers.HUnit       (testCase)
 import Test.HUnit                           (Assertion,(@?=))
 import Data.Monoid                          (All(..))
 import Data.Traversable
+import Data.Foldable
 import Control.Applicative
 import Data.Coerce
+import Data.Functor.Compose
 
 import Data.Word
 import Data.Function (on)
@@ -54,6 +56,7 @@ tests =
     ]
   , testGroup "Bit Trie"
     [ testProperty "Basic Insert and Lookup" bitTrieBasic
+    , testProperty "Prefixes" bitTriePrefix
     ]
   ]
 
@@ -188,7 +191,7 @@ maybeArrayWorks = do
   writeMaybeArray arr 7 (Just (Bar 15))
   e <- readMaybeArray arr 2
   f <- readMaybeArray arr 7
-  (a,b,c,d,e,f) @?= 
+  (a,b,c,d,e,f) @?=
     ( Just Foo, Just $ Bar 62
     , Just $ Baz True, Nothing
     , Nothing, Just (Bar 15)
@@ -196,17 +199,28 @@ maybeArrayWorks = do
 
 bitTrieBasic :: [Word8] -> Bool
 bitTrieBasic xs =
-  let sg = runST $ do
+  let res = runST $ do
         trie <- BitTrie.new
-        forM_ xs $ \x -> BitTrie.insert trie x x
-        start <- MGraph.insertVertex mg (0 :: Int)
-        let insertNext prevVertex zs i = case zs of
-              [] -> return ()
-              y : ys -> do
-                vertex <- MGraph.insertVertex mg i
-                MGraph.insertEdge mg prevVertex vertex y
-                insertNext vertex ys (i + 1)
-        insertNext start xs 1
+        for_ xs $ \x -> BitTrie.insert trie x x
+        Const (All res) <- getCompose $ for_ xs $ \x -> Compose $ do
+          m <- BitTrie.lookup trie x
+          return $ Const $ case m of
+            Nothing -> All False
+            Just y -> All (x == y)
+        return res
+   in res == True
 
-
-
+bitTriePrefix :: Word8 -> Bool
+bitTriePrefix x = do
+  let res = runST $ do
+        trie <- BitTrie.new
+        BitTrie.insertPrefix trie 4 0xF0 'B'
+        BitTrie.insertPrefix trie 1 0x80 'A'
+        BitTrie.insertPrefix trie 4 0x00 'C'
+        m <- BitTrie.lookup trie x
+        return $ case () of
+          () | x <  0x10 -> m == Just 'C'
+             | x >= 0xF0 -> m == Just 'B'
+             | x >= 0x80 -> m == Just 'A'
+             | otherwise -> m == Nothing
+   in res == True
