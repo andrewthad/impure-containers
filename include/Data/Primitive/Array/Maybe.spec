@@ -2,24 +2,24 @@ module spec Data.Primitive.Array.Maybe where
 
 import GHC.Base
 
-data variance Data.Primitive.Array.Mutable invariant covariant
+data variance Data.Primitive.Array.Maybe.MutableMaybeArray invariant covariant
 
-measure malen :: MutablePrimArray s a -> Int
+measure mmalen :: Data.Primitive.Array.Maybe.MutableMaybeArray s a -> Int
 
-invariant {v : MutablePrimArray s a | 0 <= malen v }
+invariant {v : MutablePrimArray s a | 0 <= mmalen v }
 
 assume newMaybeArray :: PrimMonad m
   => n:Nat 
   -> a
-  -> m {v:(MutableMaybeArray (PrimState m) a) | n = malen v}
+  -> m {v:(Data.Primitive.Array.Maybe.MutableMaybeArray (PrimState m) a) | n = mmalen v}
 
 assume readMaybeArray :: PrimMonad m
-  => v:(MutableMaybeArray (PrimState m) a) 
-  -> {n:Nat | n < malen v} 
+  => v:(Data.Primitive.Array.Maybe.MutableMaybeArray (PrimState m) a) 
+  -> {n:Nat | n < mmalen v} 
   -> m (Maybe a)
 
 assume writePrimArray :: (Prim a, PrimMonad m) 
-  => v:(MutableMaybeArray (PrimState m) a) 
-  -> {n:Nat | n < malen v} -> a -> m () 
+  => v:(Data.Primitive.Array.Maybe.MutableMaybeArray (PrimState m) a) 
+  -> {n:Nat | n < mmalen v} -> a -> m () 
 
 

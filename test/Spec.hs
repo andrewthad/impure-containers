@@ -23,11 +23,14 @@ import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Debug.Trace
 
+import Data.Primitive.Array.Maybe
+
 import qualified Data.Vector as V
 import qualified Data.ArrayList.Generic as ArrayList
 import qualified Data.Heap.Mutable.ModelD as HeapD
 import qualified Data.Graph.Mutable as MGraph
 import qualified Data.Graph.Immutable as Graph
+import qualified Data.Trie.Mutable.Bits as BitTrie
 
 main :: IO ()
 main = defaultMain tests
@@ -45,6 +48,12 @@ tests =
   , testGroup "Graph"
     [ testProperty "Building only from vertices" graphBuildingVertices
     , testProperty "Trivial case for Dijkstras Algorithm" dijkstraEasyDistance
+    ]
+  , testGroup "MaybeArray"
+    [ testCase "Values are as expected" maybeArrayWorks
+    ]
+  , testGroup "Bit Trie"
+    [ testProperty "Basic Insert and Lookup" bitTrieBasic
     ]
   ]
 
@@ -140,8 +149,6 @@ graphBuildingEdgesEverywhere (TenElemsOrLessList xs) =
                    for vlist $ \vb ->
                      Const (All $ Graph.lookupEdge va vb g == Just onlyEdge)
 
-data Thing = Thing
-
 -- Every node is connected to at most two other nodes. The end
 -- nodes only have one neighbor. Go from one end node to the other.
 dijkstraEasyDistance :: [Word32] -> Bool
@@ -162,4 +169,44 @@ dijkstraEasyDistance xs =
         (Just start, Just end) ->
           let expected = Min (sum xs)
            in expected == Graph.dijkstra (\_ _ (Min x) distance -> Min (x + distance)) (Min 0) start end g
+
+data Thing = Foo | Bar Int | Baz Bool
+  deriving (Eq,Show)
+
+maybeArrayWorks :: IO ()
+maybeArrayWorks = do
+  arr <- newMaybeArray 17 Nothing
+  writeMaybeArray arr 0 (Just Foo)
+  writeMaybeArray arr 9 (Just (Bar 62))
+  writeMaybeArray arr 16 (Just (Baz True))
+  a <- readMaybeArray arr 0
+  b <- readMaybeArray arr 9
+  c <- readMaybeArray arr 16
+  d <- readMaybeArray arr 12
+  arr2 <- newMaybeArray 17 (Just (Baz True))
+  writeMaybeArray arr 2 Nothing
+  writeMaybeArray arr 7 (Just (Bar 15))
+  e <- readMaybeArray arr 2
+  f <- readMaybeArray arr 7
+  (a,b,c,d,e,f) @?= 
+    ( Just Foo, Just $ Bar 62
+    , Just $ Baz True, Nothing
+    , Nothing, Just (Bar 15)
+    )
+
+bitTrieBasic :: [Word8] -> Bool
+bitTrieBasic xs =
+  let sg = runST $ do
+        trie <- BitTrie.new
+        forM_ xs $ \x -> BitTrie.insert trie x x
+        start <- MGraph.insertVertex mg (0 :: Int)
+        let insertNext prevVertex zs i = case zs of
+              [] -> return ()
+              y : ys -> do
+                vertex <- MGraph.insertVertex mg i
+                MGraph.insertEdge mg prevVertex vertex y
+                insertNext vertex ys (i + 1)
+        insertNext start xs 1
+
+
 

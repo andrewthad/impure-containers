@@ -10,31 +10,30 @@ module Data.Primitive.Array.Maybe
 
 import Control.Monad.Primitive
 import Data.Primitive.Array
-import GHC.Prim (reallyUnsafePtrEquality#)
+import GHC.Prim (reallyUnsafePtrEquality#,Any)
+import Unsafe.Coerce (unsafeCoerce)
 
-newtype MutableMaybeArray s a = MutableMaybeArray (MutableArray s a)
+newtype MutableMaybeArray s a = MutableMaybeArray (MutableArray s Any)
 
-unsafeFromMaybe :: Maybe a -> a
-unsafeFromMaybe x = case x of
-  Nothing -> elementNothing
-  Just a -> a
-{-# INLINE unsafeFromMaybe #-}
-
-unsafeToMaybe :: a -> Maybe a
+unsafeToMaybe :: Any -> Maybe a
 unsafeToMaybe a = 
-  case reallyUnsafePtrEquality# a elementNothing of
-    0# -> Just a
+  case reallyUnsafePtrEquality# a nothingSurrogate of
+    0# -> Just (unsafeCoerce a)
     _  -> Nothing
 {-# INLINE unsafeToMaybe #-}
 
-elementNothing :: a
-elementNothing = error "elementNothing: This value should not be forced!"
-{-# NOINLINE elementNothing #-}
+nothingSurrogate :: Any
+nothingSurrogate = error "nothingSurrogate: This value should not be forced!"
+{-# NOINLINE nothingSurrogate #-}
 
 newMaybeArray :: PrimMonad m => Int -> Maybe a -> m (MutableMaybeArray (PrimState m) a)
-newMaybeArray i ma = do
-  x <- newArray i (unsafeFromMaybe ma)
-  return (MutableMaybeArray x)
+newMaybeArray i ma = case ma of
+  Just a -> do
+    x <- newArray i (unsafeCoerce a)
+    return (MutableMaybeArray x)
+  Nothing -> do 
+    x <- newArray i nothingSurrogate
+    return (MutableMaybeArray x)
 
 readMaybeArray :: PrimMonad m => MutableMaybeArray (PrimState m) a -> Int -> m (Maybe a)
 readMaybeArray (MutableMaybeArray m) ix = do
@@ -42,7 +41,8 @@ readMaybeArray (MutableMaybeArray m) ix = do
   return (unsafeToMaybe a)
 
 writeMaybeArray :: PrimMonad m => MutableMaybeArray (PrimState m) a -> Int -> Maybe a -> m ()
-writeMaybeArray (MutableMaybeArray marr) ix ma = 
-  writeArray marr ix (unsafeFromMaybe ma)
+writeMaybeArray (MutableMaybeArray marr) ix ma = case ma of
+  Just a -> writeArray marr ix (unsafeCoerce a)
+  Nothing -> writeArray marr ix nothingSurrogate
 
 

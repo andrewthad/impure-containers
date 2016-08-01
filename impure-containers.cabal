@@ -33,6 +33,7 @@ library
     Data.Graph.Types
     Data.Primitive.PrimArray
     Data.Primitive.Array.Maybe
+    Data.Primitive.MutVar.Maybe
     Data.Primitive.Bool
     -- Data.Containers.Impure.Internal
   other-modules:
