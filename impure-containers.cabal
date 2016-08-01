@@ -29,6 +29,7 @@ library
     Data.Graph.Immutable
     Data.Graph.Mutable
     Data.Trie.Mutable.Bits
+    Data.Trie.Immutable.Bits
     Data.ArrayList.Generic
     Data.Graph.Types
     Data.Primitive.PrimArray

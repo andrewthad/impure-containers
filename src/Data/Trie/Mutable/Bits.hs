@@ -1,21 +1,23 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Data.Trie.Mutable.Bits where
+module Data.Trie.Mutable.Bits
+  ( MTrie(..)
+  , new
+  , lookup
+  , insert
+  , insertPrefix
+  ) where
 
+import Prelude hiding (lookup)
 import Control.Monad.Primitive
 import Data.Bits
 import Data.Primitive.ByteArray
-import Data.Primitive.Array
 import Data.Primitive.MutVar.Maybe
-import Data.Word
-import GHC.TypeLits
-import Data.Primitive.PrimArray
-import Data.Primitive.Bool (BoolByte(..))
 
 data MTrie s k v = MTrie
-  { trieValue :: !(MutMaybeVar s v)
-  , trieLeft  :: !(MutMaybeVar s (MTrie s k v))
-  , trieRight :: !(MutMaybeVar s (MTrie s k v))
+  { mtrieValue :: !(MutMaybeVar s v)
+  , mtrieLeft  :: !(MutMaybeVar s (MTrie s k v))
+  , mtrieRight :: !(MutMaybeVar s (MTrie s k v))
   }
 
 new :: PrimMonad m => m (MTrie (PrimState m) k v)
@@ -89,5 +91,6 @@ insertPrefix theTrie theSig theKey value =
         Just nextTrie -> return nextTrie
       go (significant - 1) (unsafeShiftL key 1) nextTrie
     else writeMutMaybeVar valRef (Just value)
+
 
 
