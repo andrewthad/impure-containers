@@ -32,6 +32,7 @@ library
     Data.Trie.Immutable.Bits
     Data.ArrayList.Generic
     Data.Graph.Types
+    Data.Graph.Types.Internal
     Data.Primitive.PrimArray
     Data.Primitive.Array.Maybe
     Data.Primitive.MutVar.Maybe

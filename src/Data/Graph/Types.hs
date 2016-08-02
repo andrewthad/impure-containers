@@ -11,6 +11,8 @@ module Data.Graph.Types
   , MVertices
   , MUVertices
   , MGraph
+  , IOGraph
+  , STGraph
   ) where
 
 import Data.Graph.Types.Internal

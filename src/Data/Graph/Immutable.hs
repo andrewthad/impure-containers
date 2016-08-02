@@ -6,16 +6,47 @@
 --   operations on graphs. The types 'Graph', 'Vertex', 'Vertices'
 --   and 'Size' are all parameterized by a phantom type variable @g@.
 --   Much like the @s@ used with @ST@, this type variable will
---   always be free. It gives us a guarentee about the number of
---   vertices in a graph.
+--   always be free. It gives us a guarentee that a vertex belongs
+--   in a graph. See the bottom of this page for a more detailed
+--   explanation.
 
-module Data.Graph.Immutable where
+module Data.Graph.Immutable
+  ( -- * Graph Operations
+    lookupVertex
+  , lookupEdge
+  , mapVertices
+  , traverseVertices_
+  , traverseEdges_
+  , traverseNeighbors_
+  , vertices
+  , setVertices
+  , size
+  , freeze
+  , create
+  , with
+    -- * Algorithms
+  , dijkstra
+  , dijkstraMonoidal
+  , dijkstraMonoidalCover
+    -- * Size and Vertex
+  , sizeInt
+  , vertexInt
+    -- * Vertices
+  , verticesRead
+  , verticesLength
+  , verticesTraverse_
+  , verticesToVertexList
+  , verticesToVector
+  , verticesThaw
+  , verticesFreeze
+  ) where
 
-import Data.Graph.Types
+import Data.Graph.Types.Internal
 import Control.Monad.Primitive
 import Data.Foldable
 import Data.Vector (Vector)
 import Data.Vector.Mutable (MVector)
+import Data.Functor.Identity (Identity(..))
 import Control.Monad
 import Data.Word
 import Control.Monad.ST (runST)
@@ -34,7 +65,13 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 lookupVertex :: Eq v => v -> Graph g e v -> Maybe (Vertex g)
 lookupVertex val (Graph g) = fmap Vertex (V.elemIndex val (graphVertices g))
 
--- | Not the same as fmap because the function also takes the vertex id.
+lookupEdge :: Vertex g -> Vertex g -> Graph g e v -> Maybe e
+lookupEdge (Vertex x) (Vertex y) (Graph (SomeGraph _ neighbors edges)) =
+  case U.elemIndex y (V.unsafeIndex neighbors x) of
+    Nothing -> Nothing
+    Just ix -> Just (V.unsafeIndex (V.unsafeIndex edges x) ix)
+
+-- | Not the same as 'fmap' because the function also takes the vertex id.
 mapVertices :: (Vertex g -> a -> b) -> Graph g e a -> Graph g e b
 mapVertices f (Graph sg) = Graph sg
   { graphVertices = V.imap (coerce f) (graphVertices sg) }
@@ -55,7 +92,8 @@ traverseEdges_ f g =
           vertex g
         ) allVertices
 
--- | Change this to use unsafeRead some time soon.
+-- | Traverse the neighbors of a specific vertex.
+--   Change this to use unsafeRead some time soon.
 traverseNeighbors_ :: Applicative m
   => (Vertex g -> v -> e -> m a)
   -> Vertex g
@@ -74,36 +112,23 @@ traverseNeighbors_ f (Vertex x) (Graph g) =
         else pure ()
    in go 0
 
-lookupEdge :: Vertex g -> Vertex g -> Graph g e v -> Maybe e
-lookupEdge (Vertex x) (Vertex y) (Graph (SomeGraph _ neighbors edges)) =
-  case U.elemIndex y (V.unsafeIndex neighbors x) of
-    Nothing -> Nothing
-    Just ix -> Just (V.unsafeIndex (V.unsafeIndex edges x) ix)
 
-mutableIForM_ :: PrimMonad m => MVector (PrimState m) a -> (Int -> a -> m b) -> m ()
-mutableIForM_ m f = forM_ (take (MV.length m) (enumFrom 0)) $ \i -> do
-  a <- MV.read m i
-  f i a
-
-mutableIFoldM' :: PrimMonad m => (a -> Int -> b -> m a) -> a -> MVector (PrimState m) b -> m a
-mutableIFoldM' f x m = go 0 x where
-  len = MV.length m
-  go !i !a = if i < len
-    then do
-      b <- MV.read m i
-      aNext <- f a i b
-      go (i + 1) aNext
-    else return x
-
+-- | Get the vertices from a graph.
 vertices :: Graph g e v -> Vertices g v
 vertices (Graph (SomeGraph v _ _)) = Vertices v
 
+-- | Set the vertices of a graph.
+setVertices :: Vertices g v -> Graph g e v -> Graph g e v
+setVertices (Vertices x) (Graph (SomeGraph _ a b)) = Graph (SomeGraph x a b)
+
+-- | Get the number of vertices in a graph.
 size :: Graph g e v -> Size g
 size (Graph (SomeGraph v _ _)) = Size (V.length v)
 
-unSize :: Size g -> Int
-unSize (Size s) = s
+sizeInt :: Size g -> Int
+sizeInt (Size s) = s
 
+-- | Convert a 'Vertex' to an 'Int'.
 vertexInt :: Vertex g -> Int
 vertexInt (Vertex i) = i
 
@@ -131,13 +156,15 @@ verticesRead (Vertices v) (Vertex i) = V.unsafeIndex v i
 verticesLength :: Vertices g v -> Int
 verticesLength (Vertices v) = V.length v
 
-verticesFreeze :: PrimMonad m => MVertices g (PrimState m) v -> m (Vertices g v)
+verticesFreeze :: PrimMonad m => MVertices (PrimState m) g v -> m (Vertices g v)
 verticesFreeze (MVertices mvec) = fmap Vertices (V.freeze mvec)
 
-verticesThaw :: PrimMonad m => Vertices g v -> m (MVertices g (PrimState m) v)
+-- | Make a mutable copy of a set of 'Vertices'.
+verticesThaw :: PrimMonad m => Vertices g v -> m (MVertices (PrimState m) g v)
 verticesThaw (Vertices vec) = fmap MVertices (V.thaw vec)
 
-freeze :: PrimMonad m => MGraph g (PrimState m) e v -> m (Graph g e v)
+-- | Make an immutable copy of a mutable graph.
+freeze :: PrimMonad m => MGraph (PrimState m) g e v -> m (Graph g e v)
 freeze (MGraph vertexIndex currentIdVar edges) = do
   let initialArrayListSize = 16
   numberOfVertices <- readMutVar currentIdVar
@@ -161,7 +188,7 @@ freeze (MGraph vertexIndex currentIdVar edges) = do
 
 -- | Takes a function that builds on an empty 'MGraph'. After the function
 --   mutates the 'MGraph', it is frozen and becomes an immutable 'SomeGraph'.
-create :: PrimMonad m => (forall g. MGraph g (PrimState m) e v -> m ()) -> m (SomeGraph e v)
+create :: PrimMonad m => (forall g. MGraph (PrimState m) g e v -> m ()) -> m (SomeGraph e v)
 create f = do
   mg <- MGraph
     <$> HashTable.new
@@ -171,41 +198,126 @@ create f = do
   Graph g <- freeze mg
   return g
 
+-- | Take a function that can be performed on any 'Graph' and perform that
+--   on the given 'SomeGraph'.
 with :: SomeGraph e v -> (forall g. Graph g e v -> a) -> a
 with sg f = f (Graph sg)
 
-dijkstra :: (Ord s, Monoid s)
-  => (v -> v -> s -> e -> s)
-  -> s -- ^ Weight to assign start vertex
-  -> Vertex g -- ^ start
-  -> Vertex g -- ^ end
-  -> Graph g e v
-  -> s
-dijkstra f s start end g =
-  verticesRead (dijkstraTraversal f s start g) end
+-- | Find the shortest path between two vertices using Dijkstra\'s algorithm.
+--   The source code of this function provides an example of how to use
+--   the generalized variants of Dijkstra\'s algorithm provided by this
+--   module.
+dijkstra :: (Num e, Ord e)
+  => Vertex g -- ^ Start vertex
+  -> Vertex g -- ^ End vertex
+  -> Graph g e v -- ^ Graph
+  -> Maybe e
+dijkstra start end g = getMinDistance
+  ( dijkstraMonoidal
+    (\_ _ mdist e -> addMinDistance mdist e)
+    (MinDistance (Just 0))
+    start end g
+  )
+  where addMinDistance (MinDistance m) e = MinDistance (fmap (+ e) m)
 
--- | This is a generalization of Dijkstra\'s algorithm. This function could
---   be written without unsafely pattern matching on 'Vertex', but doing
---   so allows us to use a faster heap implementation.
-dijkstraTraversal ::
-     (Ord s, Monoid s)
-  => (v -> v -> s -> e -> s) -- ^ Weight combining function
-  -> s -- ^ Weight to assign start vertex
-  -> Vertex g -- ^ Start vertex
-  -> Graph g e v
+newtype MinDistance a = MinDistance { getMinDistance :: Maybe a }
+
+instance Eq a => Eq (MinDistance a) where
+  MinDistance a == MinDistance b = a == b
+
+instance Ord a => Ord (MinDistance a) where
+  compare (MinDistance a) (MinDistance b) = case a of
+    Nothing -> case b of
+      Nothing -> EQ
+      Just _ -> GT
+    Just aval -> case b of
+      Nothing -> LT
+      Just bval -> compare aval bval
+
+instance Ord a => Monoid (MinDistance a) where
+  mempty = MinDistance Nothing
+  mappend ma mb = min ma mb
+
+-- | A generalized version of Dijkstra\'s algorithm.
+dijkstraMonoidal :: (Ord s, Monoid s)
+  => (v -> v -> s -> e -> s) -- Weight combining function
+  -> s           -- ^ Weight to assign start vertex
+  -> Vertex g    -- ^ Start vertex
+  -> Vertex g    -- ^ End vertex
+  -> Graph g e v -- ^ Graph
+  -> s
+dijkstraMonoidal f s start end g =
+  verticesRead (dijkstraMonoidalCover f s (Identity start) g) end
+
+-- | This is a generalization of Dijkstra\'s algorithm. Like the original,
+--   it takes a start 'Vertex' but unlike the original, it does not take
+--   an end. It will continue traversing the 'Graph' until it has touched
+--   all vertices that are reachable from the start vertex.
+--
+--   Additionally, this function generalizes the notion of distance. It
+--   can be numeric (as Dijkstra has it) data, non-numeric data, or tagged numeric
+--   data. This can be used, for example, to find the shortest path from
+--   the start vertex to all other vertices in the graph.
+--
+--   In Dijkstra\'s original algorithm, tentative distances are initialized
+--   to infinity. After a node is visited, the procedure for updating its
+--   neighbors\' tentative distance to a node is to compare the existing tentative distance with
+--   the new one and to keep the lesser of the two.
+--
+--   In this variant, tentative distances are initialized to 'mempty'.
+--   The update procedure involves combining them with 'mappend' instead
+--   of being choosing the smaller of the two. For this
+--   algorithm to function correctly, the distance @s@ must have 'Ord' and
+--   'Monoid' instances satisfying:
+--
+--   > ∀ a b. mappend a b ≤ a
+--   > ∀ a b. mappend a b ≤ b
+--   > ∀ c.   mempty ≥ c
+--
+--   Additionally, the 'Monoid' instance should have a commutative 'mappend':
+--
+--   > ∀ a b. mappend a b ≅ mappend b a
+--
+--   The weight function is described by:
+--
+--   > from    to    from   edge   tentative
+--   > node   node  weight  value  to weight
+--   >  |      |      |      |      |
+--   >  V      V      V      V      V
+--   >
+--   > (v  ->  v  ->  s  ->  e  ->  s)
+--
+--   In many cases, some of input values can be ignored. For example, to implement
+--   Dijkstra\'s original algorithm the @from-node@ and @to-node@ values are
+--   not needed. The weight combining function will typically use the @from-weight@
+--   in some way. The way this algorithm uses the weight function makes it suseptible to
+--   the same negative-edge problem as the original. For some weight combining
+--   function @f@, it should be the case that:
+--
+--   > ∀ v1 v2 s e. f v1 v2 s e ≥ s
+--
+--   This function could be written without unsafely pattern matching
+--   on 'Vertex', but doing so allows us to use a faster heap implementation.
+dijkstraMonoidalCover ::
+     (Ord s, Monoid s, Foldable t)
+  => (v -> v -> s -> e -> s) -- ^ Weight function
+  -> s                 -- ^ Weight to assign start vertex
+  -> t (Vertex g)      -- ^ Start vertices
+  -> Graph g e v       -- ^ Graph
   -> Vertices g s
-dijkstraTraversal f s0 v0 g = runST $ do
+dijkstraMonoidalCover f s0 v0 g = runST $ do
   let theSize = size g
       oldVertices = vertices g
   newVertices <- Mutable.verticesReplicate theSize mempty
-  Mutable.verticesWrite newVertices v0 s0
   visited <- Mutable.verticesUReplicate theSize False
-  heap <- Heap.new (unSize theSize)
-  -- Using getVertex casts Vertex to Int. This is safe to do,
-  -- but going from Int to Vertex (done later) is normally unsafe.
-  -- We know it's ok in this case because the min heap does not
-  -- create Ints that we did not push onto it.
-  Heap.unsafePush s0 (getVertexInternal v0) heap
+  heap <- Heap.new (sizeInt theSize)
+  forM_ v0 $ \v -> do
+    Mutable.verticesWrite newVertices v s0
+    -- Using getVertex casts Vertex to Int. This is safe to do,
+    -- but going from Int to Vertex (done later) is normally unsafe.
+    -- We know it's ok in this case because the min heap does not
+    -- create Ints that we did not push onto it.
+    Heap.unsafePush s0 (getVertexInternal v) heap
   let go = do
         m <- Heap.pop heap
         case m of
@@ -231,3 +343,18 @@ dijkstraTraversal f s0 v0 g = runST $ do
   runMe
   newVerticesFrozen <- verticesFreeze newVertices
   return newVerticesFrozen
+
+-- mutableIForM_ :: PrimMonad m => MVector (PrimState m) a -> (Int -> a -> m b) -> m ()
+-- mutableIForM_ m f = forM_ (take (MV.length m) (enumFrom 0)) $ \i -> do
+--   a <- MV.read m i
+--   f i a
+--
+-- mutableIFoldM' :: PrimMonad m => (a -> Int -> b -> m a) -> a -> MVector (PrimState m) b -> m a
+-- mutableIFoldM' f x m = go 0 x where
+--   len = MV.length m
+--   go !i !a = if i < len
+--     then do
+--       b <- MV.read m i
+--       aNext <- f a i b
+--       go (i + 1) aNext
+--     else return x

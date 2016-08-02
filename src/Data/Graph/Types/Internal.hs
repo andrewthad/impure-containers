@@ -21,6 +21,7 @@ import Data.Vector (Vector,MVector)
 import Data.Primitive.MutVar (MutVar)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
+import Control.Monad.ST (RealWorld)
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 
@@ -33,9 +34,9 @@ newtype Graph g e v = Graph { getGraphInternal :: SomeGraph e v }
 -- | This is a 'Graph' without the phantom type variable. Very few
 --   functions work with this type.
 data SomeGraph e v = SomeGraph
-  { graphVertices :: !(Vector v)
+  { graphVertices                 :: !(Vector v)
   , graphOutboundNeighborVertices :: !(Vector (U.Vector Int))
-  , graphOutboundNeighborEdges :: !(Vector (Vector e))
+  , graphOutboundNeighborEdges    :: !(Vector (Vector e))
   } deriving (Functor, Eq, Ord)
 -- The neighbor vertices and neighbor edges must have
 -- equal length.
@@ -59,13 +60,13 @@ newtype Vertices g v = Vertices { getVerticesInternal :: Vector v }
 -- | Mutable vertices that have the same length as the vertices in a 'Graph'.
 --   This is used to safely implement algorithms that need to mark vertices
 --   as they traverse a graph.
-newtype MVertices g s v = MVertices { getMVerticesInternal :: MVector s v }
+newtype MVertices s g v = MVertices { getMVerticesInternal :: MVector s v }
 
 -- | Mutable unboxed vertices that have the same length as the vertices in a 'Graph'.
 --   See 'MVertices'.
-newtype MUVertices g s v = MUVertices { getMUVerticesInternal :: MU.MVector s v }
+newtype MUVertices s g v = MUVertices { getMUVerticesInternal :: MU.MVector s v }
 
--- | A strict pair of 'Int's
+-- | A strict pair of 'Int's. This is used internally.
 data IntPair = IntPair !Int !Int
   deriving (Eq,Ord,Show,Read,Generic)
 
@@ -74,9 +75,12 @@ instance Hashable IntPair
 -- | This is more accurately thought of as a graph builder rather than a mutable
 --   graph. You can add vertices and edges, and you can delete edges, but you cannot
 --   delete vertices.
-data MGraph g s e v = MGraph
+data MGraph s g e v = MGraph
   { mgraphVertexIndex :: !(MHashMap s v Int)
   , mgraphCurrentId :: !(MutVar s Int)
   , mgraphEdges :: !(MHashMap s IntPair e)
   }
+
+type IOGraph = MGraph RealWorld
+type STGraph s = MGraph s
 

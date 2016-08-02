@@ -7,6 +7,7 @@ module Data.Trie.Immutable.Bits
   , freeze
   ) where
 
+import Prelude hiding (lookup)
 import Control.Monad.Primitive
 import Data.Bits
 import Data.Primitive.ByteArray

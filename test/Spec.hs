@@ -131,8 +131,7 @@ arrayListWorks xs =
 graphBuildingVertices :: [Int] -> Bool
 graphBuildingVertices xs =
   let sg = runST $ Graph.create $ \mg -> do
-        forM_ xs $ \x -> do
-          MGraph.insertVertex mg x
+        forM_ xs (MGraph.insertVertex mg)
       ys = Graph.with sg (Graph.verticesToVector . Graph.vertices)
    in List.nub (List.sort xs) == List.sort (V.toList ys)
 
@@ -171,7 +170,7 @@ dijkstraEasyDistance xs =
         (Just _,Nothing)  -> False
         (Just start, Just end) ->
           let expected = Min (sum xs)
-           in expected == Graph.dijkstra (\_ _ (Min x) distance -> Min (x + distance)) (Min 0) start end g
+           in expected == Graph.dijkstraMonoidal (\_ _ (Min x) distance -> Min (x + distance)) (Min 0) start end g
 
 data Thing = Foo | Bar Int | Baz Bool
   deriving (Eq,Show)

@@ -29,7 +29,7 @@
 --     onto the heap, the priority of the existing one and the priority of the one you are attempting
 --     to push will be combined with the 'Monoid' instance. (Note: this could definitely be weakened
 --     to 'Semigroup'). At the moment, only bubble up is attempted after this operation, so if this
---     causing the priority to increas, the heap becomes invalid (but not in a way that causes
+--     causes the priority to increase, the heap becomes invalid (but not in a way that causes
 --     segfaults).
 --
 --   As a result of the last constraint, the 'Monoid' instance and 'Ord' instance of the priority type
