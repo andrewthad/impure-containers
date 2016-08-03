@@ -93,7 +93,6 @@ traverseEdges_ f g =
         ) allVertices
 
 -- | Traverse the neighbors of a specific vertex.
---   Change this to use unsafeRead some time soon.
 traverseNeighbors_ :: Applicative m
   => (Vertex g -> v -> e -> m a)
   -> Vertex g
@@ -101,13 +100,13 @@ traverseNeighbors_ :: Applicative m
   -> m ()
 traverseNeighbors_ f (Vertex x) (Graph g) =
   let allVertices  = graphVertices g
-      theVertices  = graphOutboundNeighborVertices g V.! x
-      edges        = graphOutboundNeighborEdges g V.! x
+      theVertices  = V.unsafeIndex (graphOutboundNeighborVertices g) x
+      edges        = V.unsafeIndex (graphOutboundNeighborEdges g) x
       numNeighbors = U.length theVertices
       go !i = if i < numNeighbors
-        then let vertexNum = theVertices U.! i
-                 vertexVal = allVertices V.! vertexNum
-                 edgeVal = edges V.! i
+        then let vertexNum = U.unsafeIndex theVertices i
+                 vertexVal = V.unsafeIndex allVertices vertexNum
+                 edgeVal = V.unsafeIndex edges i
               in f (Vertex vertexNum) vertexVal edgeVal *> go (i + 1)
         else pure ()
    in go 0
