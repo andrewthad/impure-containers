@@ -7,17 +7,25 @@ module Data.Maybe.Unsafe (UnsafeMaybe
                          ,toMaybe) where
 
 import Unsafe.Coerce
+import System.IO.Unsafe
+import System.Mem.StableName
 import GHC.Prim
 import Prelude hiding (maybe)
 
 thunk :: Int -> Int
-thunk x = error "Data.Maybe.Unsafe.nothingSurrogate evaluated"
+thunk x = error "bang"
 {-# NOINLINE thunk #-}
+
+thunkStableName :: StableName (Int -> Int)
+thunkStableName = unsafePerformIO (makeStableName thunk)
 
 -- | nothingSurrogate stands in for the value Nothing; we distinguish it by pointer
 nothingSurrogate :: Any
 nothingSurrogate = unsafeCoerce thunk
 {-# NOINLINE nothingSurrogate #-}
+
+nothingStableName :: StableName Any
+nothingStableName = unsafePerformIO (makeStableName nothingSurrogate)
 
 newtype UnsafeMaybe a = UnsafeMaybe Any
 
@@ -50,14 +58,16 @@ nothing :: UnsafeMaybe a
 nothing = UnsafeMaybe nothingSurrogate
 
 fromMaybe :: Maybe a -> UnsafeMaybe a
-fromMaybe (Just a) = unsafeCoerce a
-fromMaybe Nothing  = UnsafeMaybe nothingSurrogate
+fromMaybe (Just a) = just a
+fromMaybe Nothing  = nothing
 {-# INLINE fromMaybe #-}
 
 maybe :: b -> (a -> b) -> UnsafeMaybe a -> b
-maybe !def transform (UnsafeMaybe a) = case reallyUnsafePtrEquality# (a `seq` a) nothingSurrogate of
-  0# -> transform (unsafeCoerce a)
-  _  -> def
+maybe !def transform (UnsafeMaybe !a) = case eqStableName thunkStableName named ||
+                                            eqStableName nothingStableName named of
+  False -> transform (unsafeCoerce a)
+  True  -> def
+  where named = unsafePerformIO (makeStableName a)
 {-# INLINE maybe #-}
 
 -- toMaybe :: UnsafeMaybe a -> Maybe a

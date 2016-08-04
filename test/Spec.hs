@@ -203,14 +203,15 @@ maybeArrayWorks = do
     )
 
 unsafeMaybeWorks :: IO ()
-unsafeMaybeWorks = (a,b,c,d,e,f,g) @?= (Nothing,Just 0,1,Nothing,Just 3,Nothing,Just 4)
+unsafeMaybeWorks = (a,b,c,d,e,f,g,h) @?= (Nothing,Just 0,1,Nothing,Just 3,Nothing,Just 4,Nothing)
   where a = toMaybe $ nothing :: Maybe Int
         b = toMaybe $ just (0 :: Int)
         c = UMaybe.maybe (0 :: Int) (+1) (just 0)
-        d = toMaybe $ UMaybe.maybe nothing (const nothing) nothing :: Maybe Int
+        d = toMaybe $ nothing :: Maybe Int
         e = toMaybe $ fmap (+1) (just 2)
         f = toMaybe $ fmap (+1) nothing
         g = toMaybe $ just (just 4) >>= id
+        h = toMaybe $ UMaybe.maybe nothing (const nothing) nothing :: Maybe Int
 
 bitTrieBasic :: [Word8] -> Bool
 bitTrieBasic xs =
