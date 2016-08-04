@@ -25,7 +25,6 @@ library
     -- Data.Heap.Mutable.ModelB
     Data.Heap.Mutable.ModelC
     Data.Heap.Mutable.ModelD
-    -- Data.Vector.Unique
     Data.Graph.Immutable
     Data.Graph.Mutable
     Data.Trie.Mutable.Bits
@@ -124,6 +123,17 @@ test-suite impure-containers-test
     , vector
     , transformers
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+benchmark impure-containers-bench
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      bench
+  main-is:             Main.hs
+  build-depends:
+      base
+    , impure-containers
+    , criterion
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -O2
   default-language:    Haskell2010
 
 source-repository head
