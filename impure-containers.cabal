@@ -36,6 +36,7 @@ library
     Data.Primitive.Array.Maybe
     Data.Primitive.MutVar.Maybe
     Data.Primitive.Bool
+    Data.Maybe.Unsafe
     -- Data.Containers.Impure.Internal
   other-modules:
     Data.HashMap.Mutable.Internal.Array

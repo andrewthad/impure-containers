@@ -13,15 +13,16 @@ import Data.Bits
 import Data.Primitive.ByteArray
 import Data.Primitive.MutVar.Maybe
 import Data.Trie.Mutable.Bits (MTrie(..))
+import Data.Maybe.Unsafe
 
 data Trie k v = Trie
-  { trieValue :: !(Maybe v)
-  , trieLeft  :: !(Maybe (Trie k v))
-  , trieRight :: !(Maybe (Trie k v))
+  { trieValue :: !(UnsafeMaybe v)
+  , trieLeft  :: !(UnsafeMaybe (Trie k v))
+  , trieRight :: !(UnsafeMaybe (Trie k v))
   }
 
 empty :: Trie k v
-empty = Trie Nothing Nothing Nothing
+empty = Trie nothing nothing nothing
 
 -- | This gives the best match, that is, the
 --   value stored at the longest prefix that
@@ -30,7 +31,7 @@ lookup :: FiniteBits k
   => Trie k v
   -> k
   -> Maybe v
-lookup theTrie theKey = go Nothing theTrie theKey where
+lookup theTrie theKey = toMaybe (go nothing theTrie theKey) where
   totalBits :: Int
   totalBits = finiteBitSize theKey
   -- mask :: k
@@ -39,7 +40,7 @@ lookup theTrie theKey = go Nothing theTrie theKey where
   zero = zeroBits
   go !mres (Trie mval mleft mright) key =
     let chosen = if (mask .&. key) == zero then mleft else mright
-     in case chosen of
+     in case toMaybe chosen of
           Nothing -> mval
           Just nextTrie -> go mval nextTrie (unsafeShiftL key 1)
 
@@ -55,5 +56,5 @@ freeze = go where
     immutableRight <- case mright of
       Just right -> fmap Just $ go right
       Nothing -> return Nothing
-    return (Trie mval immutableLeft immutableRight)
+    return undefined --(Trie mval immutableLeft immutableRight)
 
