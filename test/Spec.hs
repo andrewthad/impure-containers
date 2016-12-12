@@ -16,6 +16,7 @@ import Data.Coerce
 import Data.Functor.Compose
 
 import Data.Word
+import Data.Functor.Identity
 import Data.Function (on)
 import Data.List (groupBy)
 import Control.Monad
@@ -176,7 +177,11 @@ dijkstraEasyDistance xs =
         (Just _,Nothing)  -> False
         (Just start, Just end) ->
           let expected = Min (sum xs)
-           in expected == Graph.dijkstraMonoidal (\_ _ (Min x) distance -> Min (x + distance)) (Min 0) start end g
+           in expected == Graph.atVertex end 
+                (Graph.dijkstra 
+                  (\_ _ (Min x) distance -> Min (x + distance)) 
+                  (Min 0) (Identity start) g
+                )
 
 data Thing = Foo | Bar Int | Baz Bool
   deriving (Eq,Show)

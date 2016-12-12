@@ -14,6 +14,7 @@ module Data.Graph.Immutable
   ( -- * Graph Operations
     lookupVertex
   , lookupEdge
+  , atVertex
   , mapVertices
   , traverseVertices_
   , traverseEdges_
@@ -26,14 +27,15 @@ module Data.Graph.Immutable
   , with
     -- * Algorithms
   , dijkstra
-  , dijkstraMonoidal
-  , dijkstraMonoidalCover
+  , dijkstraDistance
+  , dijkstraFoldM
     -- * Size and Vertex
   , sizeInt
   , vertexInt
     -- * Vertices
   , verticesRead
   , verticesLength
+  , verticesTraverse
   , verticesTraverse_
   , verticesToVertexList
   , verticesToVector
@@ -70,6 +72,9 @@ lookupEdge (Vertex x) (Vertex y) (Graph (SomeGraph _ neighbors edges)) =
   case U.elemIndex y (V.unsafeIndex neighbors x) of
     Nothing -> Nothing
     Just ix -> Just (V.unsafeIndex (V.unsafeIndex edges x) ix)
+
+atVertex :: Vertex g -> Graph g e v -> v
+atVertex v g = verticesRead (vertices g) v
 
 -- | Not the same as 'fmap' because the function also takes the vertex id.
 mapVertices :: (Vertex g -> a -> b) -> Graph g e a -> Graph g e b
@@ -117,7 +122,7 @@ vertices :: Graph g e v -> Vertices g v
 vertices (Graph (SomeGraph v _ _)) = Vertices v
 
 -- | Set the vertices of a graph.
-setVertices :: Vertices g v -> Graph g e v -> Graph g e v
+setVertices :: Vertices g v -> Graph g e w -> Graph g e v
 setVertices (Vertices x) (Graph (SomeGraph _ a b)) = Graph (SomeGraph x a b)
 
 -- | Get the number of vertices in a graph.
@@ -206,16 +211,17 @@ with sg f = f (Graph sg)
 --   The source code of this function provides an example of how to use
 --   the generalized variants of Dijkstra\'s algorithm provided by this
 --   module.
-dijkstra :: (Num e, Ord e)
+dijkstraDistance :: (Num e, Ord e)
   => Vertex g -- ^ Start vertex
   -> Vertex g -- ^ End vertex
   -> Graph g e v -- ^ Graph
   -> Maybe e
-dijkstra start end g = getMinDistance
-  ( dijkstraMonoidal
+dijkstraDistance start end g = 
+  getMinDistance $ atVertex end
+  ( dijkstra
     (\_ _ mdist e -> addMinDistance mdist e)
     (MinDistance (Just 0))
-    start end g
+    (Identity start) g
   )
   where addMinDistance (MinDistance m) e = MinDistance (fmap (+ e) m)
 
@@ -236,17 +242,6 @@ instance Ord a => Ord (MinDistance a) where
 instance Ord a => Monoid (MinDistance a) where
   mempty = MinDistance Nothing
   mappend ma mb = min ma mb
-
--- | A generalized version of Dijkstra\'s algorithm.
-dijkstraMonoidal :: (Ord s, Monoid s)
-  => (v -> v -> s -> e -> s) -- Weight combining function
-  -> s           -- ^ Weight to assign start vertex
-  -> Vertex g    -- ^ Start vertex
-  -> Vertex g    -- ^ End vertex
-  -> Graph g e v -- ^ Graph
-  -> s
-dijkstraMonoidal f s start end g =
-  verticesRead (dijkstraMonoidalCover f s (Identity start) g) end
 
 -- | This is a generalization of Dijkstra\'s algorithm. Like the original,
 --   it takes a start 'Vertex' but unlike the original, it does not take
@@ -297,14 +292,41 @@ dijkstraMonoidal f s start end g =
 --
 --   This function could be written without unsafely pattern matching
 --   on 'Vertex', but doing so allows us to use a faster heap implementation.
-dijkstraMonoidalCover ::
+dijkstra ::
      (Ord s, Monoid s, Foldable t)
   => (v -> v -> s -> e -> s) -- ^ Weight function
-  -> s                 -- ^ Weight to assign start vertex
-  -> t (Vertex g)      -- ^ Start vertices
-  -> Graph g e v       -- ^ Graph
-  -> Vertices g s
-dijkstraMonoidalCover f s0 v0 g = runST $ do
+  -> s -- ^ Weight to assign start vertex
+  -> t (Vertex g) -- ^ Start vertices
+  -> Graph g e v -- ^ Graph
+  -> Graph g e s
+dijkstra f s0 v0 g = 
+  fst $ runST $ dijkstraGeneral f (\_ _ _ -> return ()) s0 () v0 g
+
+-- Traverse every vertex in the graph and monadically fold
+-- their values.
+dijkstraFoldM :: 
+     (Ord s, Monoid s, Foldable t, PrimMonad m)
+  => (v -> v -> s -> e -> s) -- ^ Weight function
+  -> (v -> s -> x -> m x) -- ^ Monadic fold function
+  -> s -- ^ Weight to assign start vertex
+  -> x -- ^ Initial accumulator
+  -> t (Vertex g) -- ^ Start vertices
+  -> Graph g e v -- ^ Graph
+  -> m x
+dijkstraFoldM f mf s0 acc v0 g = 
+  fmap snd $ dijkstraGeneral f mf s0 acc v0 g
+
+-- | This is not exported
+dijkstraGeneral ::
+     (Ord s, Monoid s, Foldable t, PrimMonad m)
+  => (v -> v -> s -> e -> s) -- ^ Weight function
+  -> (v -> s -> x -> m x) -- ^ Monadic fold
+  -> s -- ^ Weight to assign start vertex
+  -> x -- ^ Initial fold value
+  -> t (Vertex g) -- ^ Start vertices
+  -> Graph g e v -- ^ Graph
+  -> m (Graph g e s, x)
+dijkstraGeneral f step s0 x0 v0 g = do
   let theSize = size g
       oldVertices = vertices g
   newVertices <- Mutable.verticesReplicate theSize mempty
@@ -317,10 +339,10 @@ dijkstraMonoidalCover f s0 v0 g = runST $ do
     -- We know it's ok in this case because the min heap does not
     -- create Ints that we did not push onto it.
     Heap.unsafePush s0 (getVertexInternal v) heap
-  let go = do
+  let go x = do
         m <- Heap.pop heap
         case m of
-          Nothing -> return True
+          Nothing -> return (BoolWith True x)
           Just (s,unwrappedVertexIx) -> do
             -- Unsafe cast from Int to Vertex
             let vertex = Vertex unwrappedVertexIx
@@ -335,13 +357,16 @@ dijkstraMonoidalCover f s0 v0 g = runST $ do
                   (getVertexInternal neighborVertex)
                   heap
               ) vertex g
-            return False
-      runMe = do
-        isDone <- go
-        if isDone then return () else runMe
-  runMe
+            xNext <- step value s x
+            return (BoolWith False xNext)
+      runMe x = do
+        BoolWith isDone xNext <- go x
+        if isDone then return xNext else runMe xNext
+  xFinal <- runMe x0
   newVerticesFrozen <- verticesFreeze newVertices
-  return newVerticesFrozen
+  return (setVertices newVerticesFrozen g, xFinal)
+
+data BoolWith a = BoolWith Bool !a
 
 -- mutableIForM_ :: PrimMonad m => MVector (PrimState m) a -> (Int -> a -> m b) -> m ()
 -- mutableIForM_ m f = forM_ (take (MV.length m) (enumFrom 0)) $ \i -> do
