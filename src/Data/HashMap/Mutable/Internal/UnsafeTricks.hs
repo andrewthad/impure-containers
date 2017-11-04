@@ -21,6 +21,7 @@ import           Data.Vector.Mutable (MVector)
 import qualified Data.Vector.Mutable as M
 #ifdef UNSAFETRICKS
 import           GHC.Exts
+import           GHC.Types
 import           Unsafe.Coerce
 
 #if __GLASGOW_HASKELL__ >= 707
