@@ -10,7 +10,8 @@ module Data.Primitive.Array.Maybe
 
 import Control.Monad.Primitive
 import Data.Primitive.Array
-import GHC.Prim (reallyUnsafePtrEquality#,Any)
+import GHC.Prim (reallyUnsafePtrEquality#)
+import GHC.Types (Any)
 import Unsafe.Coerce (unsafeCoerce)
 
 newtype MutableMaybeArray s a = MutableMaybeArray (MutableArray s Any)

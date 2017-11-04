@@ -10,6 +10,7 @@ import Unsafe.Coerce
 import System.IO.Unsafe
 import System.Mem.StableName
 import GHC.Prim
+import GHC.Types
 import Prelude hiding (maybe)
 
 thunk :: Int -> Int

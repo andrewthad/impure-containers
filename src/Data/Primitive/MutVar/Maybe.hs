@@ -13,6 +13,7 @@ import Control.Monad.Primitive
 
 import Unsafe.Coerce
 import GHC.Prim
+import GHC.Types
 
 import Data.Maybe
 
