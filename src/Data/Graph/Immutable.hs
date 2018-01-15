@@ -16,6 +16,7 @@ module Data.Graph.Immutable
   , lookupEdge
   , atVertex
   , mapVertices
+  , mapEdges
   , traverseVertices_
   , traverseEdges_
   , traverseNeighbors_
@@ -80,6 +81,19 @@ atVertex v g = verticesRead (vertices g) v
 mapVertices :: (Vertex g -> a -> b) -> Graph g e a -> Graph g e b
 mapVertices f (Graph sg) = Graph sg
   { graphVertices = V.imap (coerce f) (graphVertices sg) }
+
+-- | Map of the edges in the graph.
+mapEdges :: (Vertex g -> Vertex g -> e -> d) -> Graph g e v -> Graph g d v
+mapEdges f (Graph (SomeGraph v verts edges)) = Graph $ SomeGraph v verts $ 
+  V.imap
+    ( \outerIx edgeVals ->
+        let vertIxs = V.unsafeIndex verts outerIx
+         in V.imap
+              ( \sourceIx edgeVal -> 
+                  let destIx = U.unsafeIndex vertIxs sourceIx
+                   in f (Vertex sourceIx) (Vertex destIx) edgeVal
+              ) edgeVals
+    ) edges
 
 traverseVertices_ :: Applicative m => (Vertex g -> v -> m a) -> Graph g e v -> m ()
 traverseVertices_ f g = verticesTraverse_ f (vertices g)
