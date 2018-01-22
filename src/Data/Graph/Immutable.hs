@@ -26,6 +26,7 @@ module Data.Graph.Immutable
   , freeze
   , create
   , with
+  , mapSome
     -- * Algorithms
   , dijkstra
   , dijkstraDistance
@@ -220,6 +221,11 @@ create f = do
 --   on the given 'SomeGraph'.
 with :: SomeGraph e v -> (forall g. Graph g e v -> a) -> a
 with sg f = f (Graph sg)
+
+-- | Lift a 'Graph' morphism into a 'SomeGraph' morphism.
+mapSome :: (forall g. Graph g e v -> Graph g e' v') -> SomeGraph e v -> SomeGraph e' v'
+mapSome f g = case f (Graph g) of
+  Graph g' -> g'
 
 -- | Find the shortest path between two vertices using Dijkstra\'s algorithm.
 --   The source code of this function provides an example of how to use
