@@ -8,15 +8,15 @@ module Data.HashMap.Mutable.Internal.Array
   ) where
 
 
+import           Control.Monad.Primitive (PrimMonad, PrimState)
 import           Control.Monad.ST
-import           Control.Monad.Primitive (PrimMonad,PrimState)
 
 #ifdef BOUNDS_CHECKING
-import qualified Data.Vector.Mutable as M
-import           Data.Vector.Mutable (MVector)
+import           Data.Vector.Mutable     (MVector)
+import qualified Data.Vector.Mutable     as M
 #else
-import qualified Data.Primitive.Array as M
-import           Data.Primitive.Array (MutableArray)
+import           Data.Primitive.Array    (MutableArray)
+import qualified Data.Primitive.Array    as M
 #endif
 
 

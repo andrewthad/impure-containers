@@ -1,25 +1,24 @@
-{-# LANGUAGE RankNTypes  #-}
-{-# LANGUAGE BangPatterns  #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Data.Heap.Mutable.ModelB where
 
-import Control.Monad
-import Control.Monad.Primitive
-import Data.Primitive.MutVar
-import Data.Vector (Vector,MVector)
-import Data.Bits (unsafeShiftL,unsafeShiftR)
-import Data.Word
-import Data.Coerce
-import Data.Vector.Unboxed (Unbox)
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Unboxed as U
-import qualified Data.Vector.Unboxed.Mutable as MU
+import           Control.Monad
+import           Control.Monad.Primitive
+import           Data.Bits                    (unsafeShiftL, unsafeShiftR)
+import           Data.Coerce
+import           Data.Primitive.MutVar
+import           Data.Vector                  (MVector, Vector)
+import qualified Data.Vector                  as V
+import qualified Data.Vector.Mutable          as MV
+import           Data.Vector.Unboxed          (Unbox)
+import qualified Data.Vector.Unboxed          as U
+import qualified Data.Vector.Unboxed.Mutable  as MU
+import           Data.Word
 
-import Data.Vector.Unboxed.Deriving
+import           Data.Vector.Unboxed.Deriving
 
 newtype Elem = Elem { getElem :: Int }
 
@@ -57,9 +56,9 @@ derivingUnbox "Elem"
 {-@ predicate Sized H N = ((mvlen (heapBinaryTree H)) > N && (umvlen (heapBinaryTreeElem H)) > N) @-}
 
 data Heap s p = Heap
-  { heapMax :: !Int
-  , heapBinaryTree :: !(MVector s p) -- ^ Binary tree of priorities
-  , heapBinaryTreeElem :: !(MU.MVector s Elem) -- ^ Binary tree of elements
+  { heapMax             :: !Int
+  , heapBinaryTree      :: !(MVector s p) -- ^ Binary tree of priorities
+  , heapBinaryTreeElem  :: !(MU.MVector s Elem) -- ^ Binary tree of elements
   , heapElemLookupIndex :: !(MU.MVector s Int) -- ^ Lookup binary tree index by element
   }
 

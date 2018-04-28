@@ -45,25 +45,25 @@ module Data.Graph.Immutable
   , verticesFreeze
   ) where
 
-import Data.Graph.Types.Internal
-import Control.Monad.Primitive
-import Data.Foldable
-import Data.Vector (Vector)
-import Data.Vector.Mutable (MVector)
-import Data.Functor.Identity (Identity(..))
-import Control.Monad
-import Data.Word
-import Control.Monad.ST (runST)
-import Data.Primitive.MutVar
-import Data.Coerce (coerce)
-import qualified Data.Graph.Mutable as Mutable
-import qualified Data.ArrayList.Generic as ArrayList
-import qualified Data.HashMap.Mutable.Basic as HashTable
-import qualified Data.Heap.Mutable.ModelD as Heap
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Unboxed as U
+import           Control.Monad
+import           Control.Monad.Primitive
+import           Control.Monad.ST            (runST)
+import qualified Data.ArrayList.Generic      as ArrayList
+import           Data.Coerce                 (coerce)
+import           Data.Foldable
+import           Data.Functor.Identity       (Identity (..))
+import qualified Data.Graph.Mutable          as Mutable
+import           Data.Graph.Types.Internal
+import qualified Data.HashMap.Mutable.Basic  as HashTable
+import qualified Data.Heap.Mutable.ModelD    as Heap
+import           Data.Primitive.MutVar
+import           Data.Vector                 (Vector)
+import qualified Data.Vector                 as V
+import           Data.Vector.Mutable         (MVector)
+import qualified Data.Vector.Mutable         as MV
+import qualified Data.Vector.Unboxed         as U
 import qualified Data.Vector.Unboxed.Mutable as MU
+import           Data.Word
 
 -- | Lookup a 'Vertex' by its label.
 lookupVertex :: Eq v => v -> Graph g e v -> Maybe (Vertex g)
@@ -85,12 +85,12 @@ mapVertices f (Graph sg) = Graph sg
 
 -- | Map of the edges in the graph.
 mapEdges :: (Vertex g -> Vertex g -> e -> d) -> Graph g e v -> Graph g d v
-mapEdges f (Graph (SomeGraph v verts edges)) = Graph $ SomeGraph v verts $ 
+mapEdges f (Graph (SomeGraph v verts edges)) = Graph $ SomeGraph v verts $
   V.imap
     ( \outerIx edgeVals ->
         let vertIxs = V.unsafeIndex verts outerIx
          in V.imap
-              ( \sourceIx edgeVal -> 
+              ( \sourceIx edgeVal ->
                   let destIx = U.unsafeIndex vertIxs sourceIx
                    in f (Vertex sourceIx) (Vertex destIx) edgeVal
               ) edgeVals
@@ -236,7 +236,7 @@ dijkstraDistance :: (Num e, Ord e)
   -> Vertex g -- ^ End vertex
   -> Graph g e v -- ^ Graph
   -> Maybe e
-dijkstraDistance start end g = 
+dijkstraDistance start end g =
   getMinDistance $ atVertex end
   ( dijkstra
     (\_ _ mdist e -> addMinDistance mdist e)
@@ -319,12 +319,12 @@ dijkstra ::
   -> t (Vertex g) -- ^ Start vertices
   -> Graph g e v -- ^ Graph
   -> Graph g e s
-dijkstra f s0 v0 g = 
+dijkstra f s0 v0 g =
   fst $ runST $ dijkstraGeneral f (\_ _ _ -> return ()) s0 () v0 g
 
 -- Traverse every vertex in the graph and monadically fold
 -- their values.
-dijkstraFoldM :: 
+dijkstraFoldM ::
      (Ord s, Monoid s, Foldable t, PrimMonad m)
   => (v -> v -> s -> e -> s) -- ^ Weight function
   -> (v -> s -> x -> m x) -- ^ Monadic fold function
@@ -333,7 +333,7 @@ dijkstraFoldM ::
   -> t (Vertex g) -- ^ Start vertices
   -> Graph g e v -- ^ Graph
   -> m x
-dijkstraFoldM f mf s0 acc v0 g = 
+dijkstraFoldM f mf s0 acc v0 g =
   fmap snd $ dijkstraGeneral f mf s0 acc v0 g
 
 -- | This is not exported

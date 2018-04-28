@@ -22,10 +22,10 @@ module Data.HashMap.Mutable.Internal.Utils
   , unsafeIOToST
   ) where
 
-import           Data.Bits                        hiding (shiftL)
+import           Data.Bits                              hiding (shiftL)
 import           Data.HashMap.Mutable.Internal.IntArray (Elem)
-import           Data.Vector                      (Vector)
-import qualified Data.Vector                      as V
+import           Data.Vector                            (Vector)
+import qualified Data.Vector                            as V
 #if __GLASGOW_HASKELL__ >= 503
 import           GHC.Exts
 #else
@@ -34,9 +34,9 @@ import           Data.Word
 #endif
 
 #if MIN_VERSION_base(4,4,0)
-import           Control.Monad.ST.Unsafe          (unsafeIOToST)
+import           Control.Monad.ST.Unsafe                (unsafeIOToST)
 #else
-import           Control.Monad.ST                 (unsafeIOToST)
+import           Control.Monad.ST                       (unsafeIOToST)
 #endif
 
 ------------------------------------------------------------------------------

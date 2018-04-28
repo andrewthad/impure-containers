@@ -1,24 +1,24 @@
-{-# LANGUAGE BangPatterns  #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-@ LIQUID "--notermination" @-}
 module Data.Heap.Mutable.ModelA where
 
-import Control.Monad
-import Control.Monad.Primitive
-import Data.Primitive.MutVar
-import Data.Vector (Vector,MVector)
-import Data.Bits (unsafeShiftL,unsafeShiftR)
-import Data.Word
-import Data.Coerce
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Unboxed as U
-import qualified Data.Vector.Unboxed.Mutable as MU
+import           Control.Monad
+import           Control.Monad.Primitive
+import           Data.Bits                    (unsafeShiftL, unsafeShiftR)
+import           Data.Coerce
+import           Data.Primitive.MutVar
+import           Data.Vector                  (MVector, Vector)
+import qualified Data.Vector                  as V
+import qualified Data.Vector.Mutable          as MV
+import qualified Data.Vector.Unboxed          as U
+import qualified Data.Vector.Unboxed.Mutable  as MU
+import           Data.Word
 
-import Data.Vector.Unboxed.Deriving
+import           Data.Vector.Unboxed.Deriving
 
 newtype Elem = Elem { getElem :: Int }
 
@@ -35,11 +35,11 @@ derivingUnbox "Elem"
     [| coerce |]
 
 data Heap s p = Heap
-  { heapBinaryTree :: MVector s p -- ^ Binary tree of priorities
-  , heapBinaryTreeElem :: MU.MVector s Elem -- ^ Binary tree of elements
+  { heapBinaryTree      :: MVector s p -- ^ Binary tree of priorities
+  , heapBinaryTreeElem  :: MU.MVector s Elem -- ^ Binary tree of elements
   , heapElemLookupIndex :: MU.MVector s Int -- ^ Lookup binary tree index by element
-  , heapSize :: MutVar s Int -- ^ Current heap size
-  , heapMax :: Int
+  , heapSize            :: MutVar s Int -- ^ Current heap size
+  , heapMax             :: Int
   }
 
 {-@ measure maxVal :: Heap s p -> Int @-}

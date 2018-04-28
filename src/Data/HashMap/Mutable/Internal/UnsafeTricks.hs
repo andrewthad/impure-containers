@@ -1,8 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP          #-}
-#ifdef UNSAFETRICKS
 {-# LANGUAGE MagicHash    #-}
-#endif
 
 module Data.HashMap.Mutable.Internal.UnsafeTricks
   ( Key
@@ -17,15 +15,15 @@ module Data.HashMap.Mutable.Internal.UnsafeTricks
   ) where
 
 import           Control.Monad.Primitive
-import           Data.Vector.Mutable (MVector)
-import qualified Data.Vector.Mutable as M
+import           Data.Vector.Mutable     (MVector)
+import qualified Data.Vector.Mutable     as M
 #ifdef UNSAFETRICKS
 import           GHC.Exts
 import           GHC.Types
 import           Unsafe.Coerce
 
 #if __GLASGOW_HASKELL__ >= 707
-import           GHC.Exts                         (isTrue#)
+import           GHC.Exts                (isTrue#)
 #else
 isTrue# :: Bool -> Bool
 isTrue# = id

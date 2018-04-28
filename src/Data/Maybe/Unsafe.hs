@@ -1,4 +1,5 @@
-{-# LANGUAGE MagicHash, BangPatterns #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MagicHash    #-}
 module Data.Maybe.Unsafe (UnsafeMaybe
                          ,just
                          ,nothing
@@ -6,12 +7,12 @@ module Data.Maybe.Unsafe (UnsafeMaybe
                          ,maybe
                          ,toMaybe) where
 
-import Unsafe.Coerce
-import System.IO.Unsafe
-import System.Mem.StableName
-import GHC.Prim
-import GHC.Types
-import Prelude hiding (maybe)
+import           GHC.Prim
+import           GHC.Types
+import           Prelude               hiding (maybe)
+import           System.IO.Unsafe
+import           System.Mem.StableName
+import           Unsafe.Coerce
 
 thunk :: Int -> Int
 thunk x = error "bang"

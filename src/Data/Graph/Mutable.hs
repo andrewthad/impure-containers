@@ -14,14 +14,14 @@ module Data.Graph.Mutable
   , verticesURead
   ) where
 
-import Data.Graph.Types.Internal
-import Control.Monad.Primitive
-import qualified Data.Vector.Mutable as MV
+import           Control.Monad.Primitive
+import           Data.Graph.Types.Internal
+import           Data.Hashable               (Hashable)
+import qualified Data.HashMap.Mutable.Basic  as HashTable
+import           Data.Primitive.MutVar
+import qualified Data.Vector.Mutable         as MV
+import           Data.Vector.Unboxed         (Unbox)
 import qualified Data.Vector.Unboxed.Mutable as MU
-import Data.Vector.Unboxed (Unbox)
-import Data.Primitive.MutVar
-import Data.Hashable (Hashable)
-import qualified Data.HashMap.Mutable.Basic as HashTable
 
 {- $mutgraph
    Operations that mutate a 'MGraph'. Vertices and edges can both be added,

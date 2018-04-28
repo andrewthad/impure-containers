@@ -1,7 +1,6 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE BangPatterns  #-}
 module Data.Graph.Types
   ( SomeGraph
   , Graph
@@ -15,5 +14,5 @@ module Data.Graph.Types
   , STGraph
   ) where
 
-import Data.Graph.Types.Internal
+import           Data.Graph.Types.Internal
 

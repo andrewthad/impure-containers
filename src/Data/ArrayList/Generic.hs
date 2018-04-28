@@ -2,15 +2,15 @@
 
 module Data.ArrayList.Generic where
 
-import Control.Monad.Primitive
-import Data.Vector.Generic.Mutable (MVector)
-import Data.Vector.Generic (Vector, Mutable)
-import Data.Primitive.MutVar
+import           Control.Monad.Primitive
+import           Data.Primitive.MutVar
+import           Data.Vector.Generic         (Mutable, Vector)
+import qualified Data.Vector.Generic         as GV
+import           Data.Vector.Generic.Mutable (MVector)
 import qualified Data.Vector.Generic.Mutable as GM
-import qualified Data.Vector.Generic as GV
 
 data ArrayList v s a = ArrayList
-  { arrayListSize :: !(MutVar s Int)
+  { arrayListSize   :: !(MutVar s Int)
   , arrayListVector :: !(MutVar s (v s a))
   }
 

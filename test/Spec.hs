@@ -2,40 +2,42 @@
 
 module Main (main) where
 
-import Test.QuickCheck                      (Gen, Arbitrary(..), choose, shrinkIntegral,
-                                             listOf, vectorOf)
-import Test.Framework                       (defaultMain, testGroup, Test)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.Framework.Providers.HUnit       (testCase)
-import Test.HUnit                           (Assertion,(@?=))
-import Data.Monoid                          (All(..))
-import Data.Traversable
-import Data.Foldable
-import Control.Applicative
-import Data.Coerce
-import Data.Functor.Compose
+import           Control.Applicative
+import           Data.Coerce
+import           Data.Foldable
+import           Data.Functor.Compose
+import           Data.Monoid                          (All (..))
+import           Data.Traversable
+import           Test.Framework
+                 (Test, defaultMain, testGroup)
+import           Test.Framework.Providers.HUnit       (testCase)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Test.HUnit                           (Assertion, (@?=))
+import           Test.QuickCheck
+                 (Arbitrary (..), Gen, choose, listOf, shrinkIntegral,
+                 vectorOf)
 
-import Data.Word
-import Data.Functor.Identity
-import Data.Function (on)
-import Data.List (groupBy)
-import Control.Monad
-import Control.Monad.ST
-import qualified Data.List as List
-import qualified Data.Set as Set
-import qualified Data.Map.Strict as Map
-import Debug.Trace
+import           Control.Monad
+import           Control.Monad.ST
+import           Data.Function                        (on)
+import           Data.Functor.Identity
+import           Data.List                            (groupBy)
+import qualified Data.List                            as List
+import qualified Data.Map.Strict                      as Map
+import qualified Data.Set                             as Set
+import           Data.Word
+import           Debug.Trace
 
-import Data.Primitive.Array.Maybe
+import           Data.Primitive.Array.Maybe
 
-import qualified Data.Vector as V
-import qualified Data.ArrayList.Generic as ArrayList
-import qualified Data.Heap.Mutable.ModelD as HeapD
-import qualified Data.Graph.Mutable as MGraph
-import qualified Data.Graph.Immutable as Graph
-import qualified Data.Trie.Mutable.Bits as BitTrie
-import qualified Data.Maybe.Unsafe as UMaybe
-import           Data.Maybe.Unsafe hiding (maybe)
+import qualified Data.ArrayList.Generic               as ArrayList
+import qualified Data.Graph.Immutable                 as Graph
+import qualified Data.Graph.Mutable                   as MGraph
+import qualified Data.Heap.Mutable.ModelD             as HeapD
+import           Data.Maybe.Unsafe                    hiding (maybe)
+import qualified Data.Maybe.Unsafe                    as UMaybe
+import qualified Data.Trie.Mutable.Bits               as BitTrie
+import qualified Data.Vector                          as V
 
 main :: IO ()
 main = defaultMain tests
@@ -177,9 +179,9 @@ dijkstraEasyDistance xs =
         (Just _,Nothing)  -> False
         (Just start, Just end) ->
           let expected = Min (sum xs)
-           in expected == Graph.atVertex end 
-                (Graph.dijkstra 
-                  (\_ _ (Min x) distance -> Min (x + distance)) 
+           in expected == Graph.atVertex end
+                (Graph.dijkstra
+                  (\_ _ (Min x) distance -> Min (x + distance))
                   (Min 0) (Identity start) g
                 )
 

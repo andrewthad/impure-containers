@@ -1,7 +1,6 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE BangPatterns  #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -16,14 +15,14 @@
 --
 module Data.Graph.Types.Internal where
 
-import Data.HashMap.Mutable.Basic (MHashMap)
-import Data.Vector (Vector,MVector)
-import Data.Primitive.MutVar (MutVar)
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
-import Control.Monad.ST (RealWorld)
-import qualified Data.Vector.Unboxed as U
+import           Control.Monad.ST            (RealWorld)
+import           Data.Hashable               (Hashable)
+import           Data.HashMap.Mutable.Basic  (MHashMap)
+import           Data.Primitive.MutVar       (MutVar)
+import           Data.Vector                 (MVector, Vector)
+import qualified Data.Vector.Unboxed         as U
 import qualified Data.Vector.Unboxed.Mutable as MU
+import           GHC.Generics                (Generic)
 
 -- | A 'Graph' with edges labeled by @e@ and vertices labeled by @v@.
 --   The @g@ type variable is a phatom type that associates a
@@ -77,8 +76,8 @@ instance Hashable IntPair
 --   delete vertices.
 data MGraph s g e v = MGraph
   { mgraphVertexIndex :: !(MHashMap s v Int)
-  , mgraphCurrentId :: !(MutVar s Int)
-  , mgraphEdges :: !(MHashMap s IntPair e)
+  , mgraphCurrentId   :: !(MutVar s Int)
+  , mgraphEdges       :: !(MHashMap s IntPair e)
   }
 
 type IOGraph = MGraph RealWorld

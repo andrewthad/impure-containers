@@ -20,8 +20,9 @@ module Data.HashMap.Mutable.Internal.CacheLine
   ) where
 
 import           Control.Monad
-import           Control.Monad.ST                 (ST)
-import           Control.Monad.Primitive          (PrimMonad,PrimState,unsafePrimToPrim)
+import           Control.Monad.Primitive
+                 (PrimMonad, PrimState, unsafePrimToPrim)
+import           Control.Monad.ST                       (ST)
 
 import           Data.HashMap.Mutable.Internal.IntArray (Elem, IntArray)
 import qualified Data.HashMap.Mutable.Internal.IntArray as M
@@ -31,7 +32,7 @@ import           Foreign.C.Types
 #else
 import           Data.Bits
 import           Data.Int
-import qualified Data.Vector.Unboxed              as U
+import qualified Data.Vector.Unboxed                    as U
 import           GHC.Int
 #endif
 
@@ -39,7 +40,7 @@ import           Data.HashMap.Mutable.Internal.Utils
 import           GHC.Exts
 
 #if __GLASGOW_HASKELL__ >= 707
-import           GHC.Exts                         (isTrue#)
+import           GHC.Exts                               (isTrue#)
 #else
 isTrue# :: Bool -> Bool
 isTrue# = id

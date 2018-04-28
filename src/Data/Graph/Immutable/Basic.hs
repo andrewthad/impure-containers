@@ -1,19 +1,24 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE GADTSyntax   #-}
+{-# LANGUAGE RankNTypes   #-}
+
 module Data.Graph.Immutable.Basic where
 
-import Data.Vector (Vector)
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Unboxed as U
+import           Data.Vector                 (Vector)
+import qualified Data.Vector                 as V
+import qualified Data.Vector.Mutable         as MV
+import qualified Data.Vector.Unboxed         as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 
 data Vertex g = Vertex { getVertex :: Int }
 
-data SomeGraph e v = forall g. SomeGraph { getSomeGraph :: Graph g e v }
+data SomeGraph e v where
+  SomeGraph :: { getSomeGraph :: Graph g e v } -> SomeGraph e v
 
 data Graph g e v = Graph
-  { graphVertices :: Vector v
+  { graphVertices          :: Vector v
   , graphOutboundNeighbors :: Vector (U.Vector Int)
-  , graphEdges :: Int -> Int -> e
+  , graphEdges             :: Int -> Int -> e
   }
 
 visited,allowed,notAllowed :: Word8

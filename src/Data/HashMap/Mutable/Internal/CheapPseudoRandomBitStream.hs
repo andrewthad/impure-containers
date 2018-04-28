@@ -9,11 +9,11 @@ module Data.HashMap.Mutable.Internal.CheapPseudoRandomBitStream
 
 import           Control.Applicative
 import           Control.Monad.ST
-import           Data.Bits                     ((.&.))
+import           Data.Bits                           ((.&.))
 import           Data.STRef
-import           Data.Vector.Unboxed           (Vector)
-import qualified Data.Vector.Unboxed           as V
-import           Data.Word                     (Word, Word32, Word64)
+import           Data.Vector.Unboxed                 (Vector)
+import qualified Data.Vector.Unboxed                 as V
+import           Data.Word                           (Word, Word32, Word64)
 
 import           Data.HashMap.Mutable.Internal.Utils
 
