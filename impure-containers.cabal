@@ -77,6 +77,9 @@ library
                         , Data.Primitive.Bool
                         , Data.Maybe.Unsafe
                           -- , Data.Containers.Impure.Internal
+                        , ImpureContainers.PrimRef
+                        , ImpureContainers.MByteArray
+                        , ImpureContainers.Misc.Mobility
   other-modules:          Data.HashMap.Mutable.Internal.Array
                         , Data.HashMap.Mutable.Internal.CacheLine
                         , Data.HashMap.Mutable.Internal.CheapPseudoRandomBitStream
