@@ -1,4 +1,5 @@
-Copyright Andrew Martin (c) 2016
+Copyright Andrew Martin    2016-2018
+Copyright Remy Goldschmidt 2018
 
 All rights reserved.
 
