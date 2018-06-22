@@ -7,13 +7,13 @@ module Data.Trie.Immutable.Bits
   , freeze
   ) where
 
-import Prelude hiding (lookup)
-import Control.Monad.Primitive
-import Data.Bits
-import Data.Primitive.ByteArray
-import Data.Primitive.MutVar.Maybe
-import Data.Trie.Mutable.Bits (MTrie(..))
-import Data.Maybe.Unsafe
+import           Control.Monad.Primitive
+import           Data.Bits
+import           Data.Maybe.Unsafe
+import           Data.Primitive.ByteArray
+import           Data.Primitive.MutVar.Maybe
+import           Data.Trie.Mutable.Bits      (MTrie (..))
+import           Prelude                     hiding (lookup)
 
 data Trie k v = Trie
   { trieValue :: !(UnsafeMaybe v)

@@ -1,21 +1,20 @@
-{-# LANGUAGE MagicHash    #-} 
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MagicHash #-}
 
-module Data.Primitive.MutVar.Maybe 
+module Data.Primitive.MutVar.Maybe
   ( MutMaybeVar
   , newMutMaybeVar
   , readMutMaybeVar
   , writeMutMaybeVar
   ) where
 
-import Data.Primitive.MutVar
-import Control.Monad.Primitive
+import           Control.Monad.Primitive
+import           Data.Primitive.MutVar
 
-import Unsafe.Coerce
-import GHC.Prim
-import GHC.Types
+import           GHC.Prim
+import           GHC.Types
+import           Unsafe.Coerce
 
-import Data.Maybe
+import           Data.Maybe
 
 newtype MutMaybeVar s a = MutMaybeVar (MutVar s Any)
 

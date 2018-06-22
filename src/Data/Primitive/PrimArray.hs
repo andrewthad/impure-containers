@@ -1,7 +1,7 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE MagicHash     #-}
 {-# LANGUAGE UnboxedTuples #-}
 
-module Data.Primitive.PrimArray 
+module Data.Primitive.PrimArray
   ( MutablePrimArray(..)
   , newPrimArray
   , readPrimArray
@@ -10,11 +10,12 @@ module Data.Primitive.PrimArray
   , setPrimArray
   ) where
 
-import Control.Monad.Primitive
-import Data.Primitive.ByteArray
-import Data.Primitive.Types
-import GHC.Prim (newByteArray#,quotInt#,sizeofMutableByteArray#,(*#))
-import GHC.Types (Int(..))
+import           Control.Monad.Primitive
+import           Data.Primitive.ByteArray
+import           Data.Primitive.Types
+import           GHC.Prim
+                 (newByteArray#, quotInt#, sizeofMutableByteArray#, (*#))
+import           GHC.Types                (Int (..))
 
 newtype MutablePrimArray s a = MutablePrimArray (MutableByteArray s)
 
@@ -39,7 +40,7 @@ sizeofMutablePrimArray p@(MutablePrimArray (MutableByteArray arr#)) =
 {-# INLINE sizeofMutablePrimArray #-}
 
 setPrimArray
-  :: (Prim a, PrimMonad m) 
+  :: (Prim a, PrimMonad m)
   => MutablePrimArray (PrimState m) a -- ^ array to fill
   -> Int -- ^ offset into array
   -> Int -- ^ number of values to fill

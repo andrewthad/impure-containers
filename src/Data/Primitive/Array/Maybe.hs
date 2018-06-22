@@ -1,23 +1,23 @@
 {-# LANGUAGE MagicHash #-}
 
 -- | This uses some unsafe hackery.
-module Data.Primitive.Array.Maybe 
+module Data.Primitive.Array.Maybe
   ( MutableMaybeArray
   , newMaybeArray
   , readMaybeArray
   , writeMaybeArray
   ) where
 
-import Control.Monad.Primitive
-import Data.Primitive.Array
-import GHC.Prim (reallyUnsafePtrEquality#)
-import GHC.Exts (Any)
-import Unsafe.Coerce (unsafeCoerce)
+import           Control.Monad.Primitive
+import           Data.Primitive.Array
+import           GHC.Exts                (Any)
+import           GHC.Prim                (reallyUnsafePtrEquality#)
+import           Unsafe.Coerce           (unsafeCoerce)
 
 newtype MutableMaybeArray s a = MutableMaybeArray (MutableArray s Any)
 
 unsafeToMaybe :: Any -> Maybe a
-unsafeToMaybe a = 
+unsafeToMaybe a =
   case reallyUnsafePtrEquality# a nothingSurrogate of
     0# -> Just (unsafeCoerce a)
     _  -> Nothing
@@ -32,7 +32,7 @@ newMaybeArray i ma = case ma of
   Just a -> do
     x <- newArray i (unsafeCoerce a)
     return (MutableMaybeArray x)
-  Nothing -> do 
+  Nothing -> do
     x <- newArray i nothingSurrogate
     return (MutableMaybeArray x)
 

@@ -2,9 +2,10 @@ module Lib
     ( someFunc
     ) where
 
-import Control.Monad.Primitive
-import Data.Vector.Mutable (MVector,IOVector,unsafeNew,unsafeWrite)
-import qualified Data.Vector.Mutable as MV
+import           Control.Monad.Primitive
+import           Data.Vector.Mutable
+                 (IOVector, MVector, unsafeNew, unsafeWrite)
+import qualified Data.Vector.Mutable     as MV
 
 {-@ measure mvlen    :: Data.Vector.MVector s a -> Int @-}
 {-@ invariant       { v : Data.Vector.MVector s a | 0 <= mvlen v } @-}
@@ -14,8 +15,8 @@ import qualified Data.Vector.Mutable as MV
 {-@ assume unsafeWrite :: Control.Monad.Primitive.PrimMonad m
       => x:(Data.Vector.MVector (Control.Monad.Primitive.PrimState m) a)
       -> ix:{v:Nat | v < mvlen x }
-		  -> a
-		  -> m ()
+      -> a
+      -> m ()
 @-}
 
 {-@ testWrite :: PrimMonad m => x:(MVector (PrimState m) a) -> ix:{v:Nat | v < mvlen x } -> a -> (a -> a) -> m () @-}

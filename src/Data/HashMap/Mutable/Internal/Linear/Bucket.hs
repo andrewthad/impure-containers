@@ -23,16 +23,18 @@ module Data.HashMap.Mutable.Internal.Linear.Bucket
 
 
 ------------------------------------------------------------------------------
-import           Control.Monad                        hiding (foldM, mapM_)
+import           Control.Monad                              hiding
+                 (foldM, mapM_)
 import qualified Control.Monad
-import           Control.Monad.ST                     (ST)
+import           Control.Monad.ST                           (ST)
 #ifdef DEBUG
 import           Data.HashMap.Mutable.Internal.Utils        (unsafeIOToST)
 #endif
 import           Data.HashMap.Mutable.Internal.Array
-import           Data.Maybe                           (fromMaybe)
+import           Data.Maybe                                 (fromMaybe)
 import           Data.STRef
-import           Prelude                              hiding (lookup, mapM_)
+import           Prelude                                    hiding
+                 (lookup, mapM_)
 ------------------------------------------------------------------------------
 import           Data.HashMap.Mutable.Internal.UnsafeTricks
 

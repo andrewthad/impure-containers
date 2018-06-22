@@ -1,6 +1,6 @@
-{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE MagicHash           #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This module provides a variant of a mutable binary min heap that is used elsewhere to implement
@@ -44,24 +44,24 @@
 
 module Data.Heap.Mutable.ModelC where
 
-import Control.Monad
-import Control.Monad.Primitive
-import Data.Primitive.MutVar
-import Data.Primitive.Types (sizeOf#)
-import GHC.Types (Int(..))
-import Data.Vector (Vector,MVector)
-import Data.Bits (unsafeShiftL,unsafeShiftR)
-import Data.Word
-import Data.Coerce
-import Data.Vector.Unboxed (Unbox)
-import Data.Primitive.Array
-import Data.Primitive.ByteArray
-import Debug.Trace
-import qualified Data.Primitive.Array as A
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Unboxed as U
+import           Control.Monad
+import           Control.Monad.Primitive
+import           Data.Bits                   (unsafeShiftL, unsafeShiftR)
+import           Data.Coerce
+import           Data.Primitive.Array
+import qualified Data.Primitive.Array        as A
+import           Data.Primitive.ByteArray
+import           Data.Primitive.MutVar
+import           Data.Primitive.Types        (sizeOf#)
+import           Data.Vector                 (MVector, Vector)
+import qualified Data.Vector                 as V
+import qualified Data.Vector.Mutable         as MV
+import           Data.Vector.Unboxed         (Unbox)
+import qualified Data.Vector.Unboxed         as U
 import qualified Data.Vector.Unboxed.Mutable as MU
+import           Data.Word
+import           Debug.Trace
+import           GHC.Types                   (Int (..))
 
 
 {-@ type Positive = {n:Int | n > 0} @-}

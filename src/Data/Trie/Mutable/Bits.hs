@@ -8,11 +8,11 @@ module Data.Trie.Mutable.Bits
   , insertPrefix
   ) where
 
-import Prelude hiding (lookup)
-import Control.Monad.Primitive
-import Data.Bits
-import Data.Primitive.ByteArray
-import Data.Primitive.MutVar.Maybe
+import           Control.Monad.Primitive
+import           Data.Bits
+import           Data.Primitive.ByteArray
+import           Data.Primitive.MutVar.Maybe
+import           Prelude                     hiding (lookup)
 
 data MTrie s k v = MTrie
   { mtrieValue :: !(MutMaybeVar s v)

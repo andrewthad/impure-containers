@@ -1,10 +1,10 @@
 module Data.Heap.Mutable.ModelD where
 
+import           Control.Monad
+import           Control.Monad.Primitive
 import qualified Data.Heap.Mutable.ModelC as I
-import Debug.Trace
-import Data.Primitive.MutVar
-import Control.Monad.Primitive
-import Control.Monad
+import           Data.Primitive.MutVar
+import           Debug.Trace
 
 data Heap s p = Heap
   { heapRaw         :: !(I.RawHeap s p)

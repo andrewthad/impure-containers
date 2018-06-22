@@ -1,20 +1,21 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE MagicHash     #-}
 {-# LANGUAGE UnboxedTuples #-}
 
 module Data.Containers.Impure.Internal where
 
-import Control.Monad.Primitive
-import Data.Primitive.ByteArray
-import Data.Primitive.Types
-import GHC.Prim (newByteArray#,quotInt#,sizeofMutableByteArray#,(*#))
-import GHC.Types (Int(..))
+import           Control.Monad.Primitive
+import           Data.Primitive.ByteArray
+import           Data.Primitive.Types
+import           GHC.Prim
+                 (newByteArray#, quotInt#, sizeofMutableByteArray#, (*#))
+import           GHC.Types                (Int (..))
 
 {-@ measure mpalen :: MutablePrimArray s a -> Int @-}
 {-@ invariant {v : MutablePrimArray s a | 0 <= mpalen v } @-}
 
 newtype MutablePrimArray s a = MutablePrimArray (MutableByteArray s)
 
-{-@ assume newPrimArray :: (PrimMonad m, Prim a) => n:Nat 
+{-@ assume newPrimArray :: (PrimMonad m, Prim a) => n:Nat
                         -> m {v:(MutablePrimArray (PrimState m) a) | n = mpalen v}
 @-}
 newPrimArray :: (PrimMonad m, Prim a) => Int -> m (MutablePrimArray (PrimState m) a)
@@ -29,9 +30,9 @@ readPrimArray :: (Prim a, PrimMonad m) => MutablePrimArray (PrimState m) a -> In
 readPrimArray (MutablePrimArray m) = readByteArray m
 {-# INLINE readPrimArray #-}
 
-{-@ assume writePrimArray :: (Prim a, PrimMonad m) 
-      => v:(MutablePrimArray (PrimState m) a) 
-      -> {n:Nat | n < mpalen v} -> a -> m () 
+{-@ assume writePrimArray :: (Prim a, PrimMonad m)
+      => v:(MutablePrimArray (PrimState m) a)
+      -> {n:Nat | n < mpalen v} -> a -> m ()
 @-}
 writePrimArray :: (Prim a, PrimMonad m) => MutablePrimArray (PrimState m) a -> Int -> a -> m ()
 writePrimArray (MutablePrimArray m) = writeByteArray m

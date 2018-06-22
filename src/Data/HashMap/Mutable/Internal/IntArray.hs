@@ -17,8 +17,8 @@ module Data.HashMap.Mutable.Internal.IntArray
   ) where
 
 ------------------------------------------------------------------------------
+import           Control.Monad.Primitive  (PrimMonad, PrimState)
 import           Control.Monad.ST
-import           Control.Monad.Primitive  (PrimMonad,PrimState)
 import           Data.Bits
 import qualified Data.Primitive.ByteArray as A
 import           Data.Primitive.Types     (Addr (..))

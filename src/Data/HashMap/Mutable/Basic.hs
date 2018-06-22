@@ -32,21 +32,22 @@ module Data.HashMap.Mutable.Basic
 
 
 ------------------------------------------------------------------------------
-import           Control.Exception                 (assert)
-import           Control.Monad                     hiding (foldM, mapM_)
-import           Control.Monad.ST                  (ST)
-import           Control.Monad.Primitive           (PrimMonad,PrimState,unsafePrimToPrim)
+import           Control.Exception                       (assert)
+import           Control.Monad                           hiding (foldM, mapM_)
+import           Control.Monad.Primitive (PrimMonad, PrimState, unsafePrimToPrim)
+import           Control.Monad.ST                        (ST)
 import           Data.Bits
-import           Data.Hashable                     (Hashable)
-import qualified Data.Hashable                     as H
+import           Data.Hashable                           (Hashable)
 import           Data.Maybe
 import           Data.Monoid
-import qualified Data.Primitive.ByteArray          as A
-import           Data.Primitive.MutVar             (MutVar,readMutVar,writeMutVar,newMutVar)
-import           Data.Semigroup                    (Semigroup)
+import           Data.Primitive.MutVar             (MutVar, newMutVar, readMutVar, writeMutVar)
 import           Data.STRef
+import           Data.Semigroup                    (Semigroup)
 import           GHC.Exts
-import           Prelude                           hiding (lookup, mapM_, read)
+import           Prelude hiding (lookup, mapM_, read)
+import qualified Data.Hashable                           as H
+import qualified Data.Primitive.ByteArray                as A
+import qualified Data.Primitive.ByteArray          as A
 ------------------------------------------------------------------------------
 import           Data.HashMap.Mutable.Internal.Array
 import           Data.HashMap.Mutable.Internal.CacheLine
