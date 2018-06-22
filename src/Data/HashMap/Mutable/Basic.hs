@@ -43,6 +43,7 @@ import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Primitive.ByteArray          as A
 import           Data.Primitive.MutVar             (MutVar,readMutVar,writeMutVar,newMutVar)
+import           Data.Semigroup                    (Semigroup)
 import           Data.STRef
 import           GHC.Exts
 import           Prelude                           hiding (lookup, mapM_, read)
@@ -52,6 +53,7 @@ import           Data.HashMap.Mutable.Internal.CacheLine
 import           Data.HashMap.Mutable.Internal.IntArray  (Elem)
 import qualified Data.HashMap.Mutable.Internal.IntArray  as U
 import           Data.HashMap.Mutable.Internal.Utils
+import qualified Data.Semigroup                          as SG
 
 
 ------------------------------------------------------------------------------
@@ -364,11 +366,12 @@ data Slot = Slot {
 
 
 ------------------------------------------------------------------------------
+instance Semigroup Slot where
+    Slot x1 b1 <> Slot x2 b2 = if x1 == maxBound then Slot x2 b2 else Slot x1 b1
+
 instance Monoid Slot where
     mempty = Slot maxBound 0
-    (Slot x1 b1) `mappend` (Slot x2 b2) =
-        if x1 == maxBound then Slot x2 b2 else Slot x1 b1
-
+    mappend = (SG.<>)
 
 ------------------------------------------------------------------------------
 -- Returns the slot in the array where it would be safe to write the given key.

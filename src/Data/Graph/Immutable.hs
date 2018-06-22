@@ -56,6 +56,7 @@ import Data.Word
 import Control.Monad.ST (runST)
 import Data.Primitive.MutVar
 import Data.Coerce (coerce)
+import Data.Semigroup (Semigroup)
 import qualified Data.Graph.Mutable as Mutable
 import qualified Data.ArrayList.Generic as ArrayList
 import qualified Data.HashMap.Mutable.Basic as HashTable
@@ -64,6 +65,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
+import qualified Data.Semigroup as SG
 
 -- | Lookup a 'Vertex' by its label.
 lookupVertex :: Eq v => v -> Graph g e v -> Maybe (Vertex g)
@@ -259,9 +261,12 @@ instance Ord a => Ord (MinDistance a) where
       Nothing -> LT
       Just bval -> compare aval bval
 
+instance Ord a => Semigroup (MinDistance a) where
+  (<>) = min
+
 instance Ord a => Monoid (MinDistance a) where
   mempty = MinDistance Nothing
-  mappend ma mb = min ma mb
+  mappend = (SG.<>)
 
 -- | This is a generalization of Dijkstra\'s algorithm. Like the original,
 --   it takes a start 'Vertex' but unlike the original, it does not take
