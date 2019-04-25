@@ -24,6 +24,7 @@ import           Data.Functor.Identity
 import           Data.List                            (groupBy)
 import qualified Data.List                            as List
 import qualified Data.Map.Strict                      as Map
+import           Data.Semigroup                       (Semigroup)
 import qualified Data.Set                             as Set
 import           Data.Word
 import           Debug.Trace
@@ -79,9 +80,10 @@ instance Arbitrary Min where
   arbitrary = fmap Min (choose (0,20))
   shrink (Min a) = fmap Min $ filter (>= 0) $ shrinkIntegral a
 
+instance Semigroup Min where
+  (Min a) <> (Min b) = Min (min a b)
 instance Monoid Min where
   mempty = Min maxBound
-  mappend (Min a) (Min b) = Min (min a b)
 
 newtype MyElement = MyElement { getMyElement :: Int }
   deriving (Show,Read,Eq,Ord)
