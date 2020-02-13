@@ -31,6 +31,7 @@
 
 --------------------------------------------------------------------------------
 
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE MagicHash       #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE UnboxedTuples   #-}
@@ -84,7 +85,12 @@ import           Data.Function               (($))
 import           Control.Monad.Primitive
                  (PrimMonad, PrimState, primitive, primitive_)
 
+#if MIN_VERSION_primitive(0, 7, 0)
+import           Data.Primitive              (Prim, Ptr, alignment, sizeOf)
+import           Data.Word                   (Word8)
+#else
 import           Data.Primitive              (Addr, Prim, alignment, sizeOf)
+#endif
 
 import qualified GHC.Prim                    as GHC.Prim
 import           GHC.Types                   (Int (I#))
@@ -180,7 +186,11 @@ instance Eq (PrimRef s a) where
 contents
   :: PrimRef s a
   -- ^ FIXME: doc
+#if MIN_VERSION_primitive(0, 7, 0)
+  -> Ptr Word8
+#else
   -> Addr
+#endif
   -- ^ FIXME: doc
 contents (MkPrimRef m) = MByteArray.contents m
 {-# INLINE contents #-}

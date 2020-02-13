@@ -1,5 +1,6 @@
 --------------------------------------------------------------------------------
 
+{-# LANGUAGE CPP       #-}
 {-# LANGUAGE MagicHash #-}
 
 --------------------------------------------------------------------------------
@@ -42,7 +43,11 @@ import           Data.Word               (Word8)
 
 import           Control.Monad.Primitive
 import           Data.Coerce             (coerce)
+#if MIN_VERSION_primitive(0, 7, 0)
+import           Data.Primitive          (Prim, Ptr)
+#else
 import           Data.Primitive          (Addr, Prim)
+#endif
 import qualified Data.Primitive
 
 import qualified GHC.Prim
@@ -108,7 +113,11 @@ newAlignedPinned = Data.Primitive.newAlignedPinnedByteArray
 contents
   :: MByteArray s
   -- ^ FIXME: doc
+#if MIN_VERSION_primitive(0, 7, 0)
+  -> Ptr Word8
+#else
   -> Addr
+#endif
   -- ^ FIXME: doc
 contents = Data.Primitive.mutableByteArrayContents
 {-# INLINE contents #-}
