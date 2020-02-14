@@ -1,27 +1,17 @@
+resolver: lts-14.25
+
+packages:
+- '.'
+
+extra-deps:
+- git: https://github.com/ucsd-progsys/liquidhaskell
+  commit: a41325c2aa5697a6bec9b6e8c39aabf0fddc3970
+- git: https://github.com/ucsd-progsys/liquid-fixpoint
+  commit: 752f9e5a572e175eda4c7c10d7a355456245c3ed
+- git: https://github.com/ucsd-progsys/prover
+  commit: f6a47df5a079f4b9586829203015cce6f82cebbb
+
 flags:
   vector:
     unsafechecks: true
     internalchecks: true
-extra-package-dbs: []
-packages:
-- '.'
-- location:
-    git: https://github.com/ucsd-progsys/liquidhaskell
-    commit: a41325c2aa5697a6bec9b6e8c39aabf0fddc3970
-  extra-dep: true
-- location:
-    git: https://github.com/ucsd-progsys/liquid-fixpoint
-    commit: 752f9e5a572e175eda4c7c10d7a355456245c3ed
-  extra-dep: true
-- location:
-    git: https://github.com/ucsd-progsys/prover
-    commit: f6a47df5a079f4b9586829203015cce6f82cebbb
-  extra-dep: true
-extra-deps:
-- daemons-0.2.1
-- dotgen-0.4.2
-- fgl-visualize-0.1.0.1
-- intern-0.9.1.4
-- located-base-0.1.1.0
-- vector-0.11.0.0
-resolver: lts-6.7
