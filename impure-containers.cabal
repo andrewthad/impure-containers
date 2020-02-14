@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 
 name:                     impure-containers
-version:                  0.5.0
+version:                  0.5.1
 stability:                Experimental
 build-type:               Simple
 cabal-version:            >= 1.10
