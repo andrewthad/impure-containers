@@ -1,4 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns     #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- |
 
@@ -33,11 +34,15 @@ module Data.ArrayList.Generic
 
 import           Control.Monad               (when)
 import           Control.Monad.Primitive
+import           Control.Monad.ST            (ST)
 import           Data.Primitive.MutVar
 import           Data.Vector.Generic         (Mutable, Vector)
 import qualified Data.Vector.Generic         as GV
 import           Data.Vector.Generic.Mutable (MVector)
 import qualified Data.Vector.Generic.Mutable as GM
+import qualified Data.Vector.Mutable         as VM
+import qualified Data.Vector.Unboxed.Mutable as VUM
+import           GHC.Prim                    (RealWorld)
 
 data ArrayList v s a = ArrayList
   { arrayListSize   :: !(MutVar s Int)
@@ -85,6 +90,12 @@ push al@(ArrayList sizeRef mvecRef) a = do
 
   GM.unsafeWrite mvec (size_ - 1) a
 {-# INLINEABLE push #-}
+{-# SPECIALIZE push :: ArrayList VM.MVector RealWorld a -> a -> IO () #-}
+{-# SPECIALIZE push :: ArrayList VM.MVector s a -> a -> ST s () #-}
+{-# SPECIALIZE push :: (GM.MVector VUM.MVector a) => ArrayList VUM.MVector RealWorld a -> a -> IO () #-}
+{-# SPECIALIZE push :: (GM.MVector VUM.MVector a) => ArrayList VUM.MVector s a -> a -> ST s () #-}
+{-# SPECIALIZE push :: (MVector v a) => ArrayList v RealWorld a -> a -> IO () #-}
+{-# SPECIALIZE push :: (MVector v a) => ArrayList v s a -> a -> ST s () #-}
 
 -- | Request to add more items to the vector. Used size will be set to current size + extra requested size.
 --
@@ -97,6 +108,9 @@ push al@(ArrayList sizeRef mvecRef) a = do
 --
 -- These may be useful when profiling your program to check how much allocations and moves 'ArrayList'
 -- does actually save.
+--
+-- This function is specialized to 'IO' and 'ST' monads, as well to simple 'VM.MVector' and unboxed
+-- 'VUM.MVector' types.
 grow :: (PrimMonad m, MVector v a) => ArrayList v (PrimState m) a -> Int -> m ()
 grow (ArrayList sizeRef mvecRef) extraSize = do
   !size_ <- readMutVar sizeRef
@@ -121,13 +135,19 @@ grow (ArrayList sizeRef mvecRef) extraSize = do
            {-# SCC "ArrayList.grow.toNewCapacity" #-} GM.unsafeGrow mvec (newCapacity - capacity)
 
       -- Ensure that the memory requested by user is initialized.
-      GM.basicInitialize $ GM.unsafeSlice size_ extraSize mvec'
+      --GM.basicInitialize $ GM.unsafeSlice size_ extraSize mvec'
 
       writeMutVar mvecRef mvec'
 
   -- In any case, remeber current used size.
   writeMutVar sizeRef newSize
 {-# INLINEABLE grow #-}
+{-# SPECIALIZE grow :: ArrayList VM.MVector RealWorld a -> Int -> IO () #-}
+{-# SPECIALIZE grow :: ArrayList VM.MVector s a -> Int -> ST s () #-}
+{-# SPECIALIZE grow :: (GM.MVector VUM.MVector a) => ArrayList VUM.MVector RealWorld a -> Int -> IO () #-}
+{-# SPECIALIZE grow :: (GM.MVector VUM.MVector a) => ArrayList VUM.MVector s a -> Int -> ST s () #-}
+{-# SPECIALIZE grow :: (MVector v a) => ArrayList v RealWorld a -> Int -> IO () #-}
+{-# SPECIALIZE grow :: (MVector v a) => ArrayList v s a -> Int -> ST s () #-}
 
 factor :: Double
 factor = 1.5
